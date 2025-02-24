@@ -5,6 +5,14 @@ import (
 )
 
 func main() {
+	for i := 0; i < 5; i++ {
+		fmt.Println("cycle with init and post")
+	}
+
+	for fmt.Println("init"); ; fmt.Println("next") {
+		break
+	}
+
 	i := 0
 	for fmt.Println("init"); i < 5; fmt.Println("next") {
 		fmt.Println(i)
