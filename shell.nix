@@ -12,5 +12,7 @@ mkShell {
   buildInputs = [
     pkgs.pandoc
     tex
+    pkgs.gopls
+    pkgs.go_1_21
   ];
 }
