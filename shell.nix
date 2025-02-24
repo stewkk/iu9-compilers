@@ -8,9 +8,18 @@ let
       fvextra;
   });
 in
-mkShell {
+mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
   buildInputs = [
     pkgs.pandoc
     tex
+    pkgs.gopls
+    pkgs.go_1_21
+    pkgs.cmake
+    pkgs.icu.dev
+  ];
+
+  nativeBuildInputs = [
+    pkgs.clang-tools_18
+    pkgs.icu.dev
   ];
 }
