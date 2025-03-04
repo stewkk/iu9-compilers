@@ -20,7 +20,7 @@ namespace stewkk::lexer {
 
 // TODO: интерфейс на итераторах
 
-enum class DomainType { kOpeningTag, kClosingTag };
+enum class DomainType { kOpeningTag, kClosingTag, kWhitespace };
 
 struct Position {
   std::size_t line;
@@ -54,9 +54,10 @@ struct Domain {
   DomainType type;
 };
 
-static const std::array<Domain, 2> kDomainPatterns{{
+static const std::array<Domain, 3> kDomainPatterns{{
     {R"((<(?:\w|\d)+>))", DomainType::kOpeningTag},
     {R"((<\/(?:\w|\d)+>))", DomainType::kClosingTag},
+    {R"((\s+))", DomainType::kWhitespace},
 }};
 
 namespace {
@@ -145,6 +146,24 @@ TEST(MatcherTest, MatchesClosingTag) {
         .text = "</div>"s,
       },
       ""sv}));
+}
+
+TEST(MatcherTest, MatchesSpaces) {
+  auto text = "  \n <div>"sv;
+  Matcher l;
+
+  auto match = l.NextMatch(text, Position{1, 1});
+
+  ASSERT_THAT(match, Optional(Match{
+      Token{
+        .domain = DomainType::kWhitespace,
+        .position = Position{
+          .line = 1,
+          .column = 1,
+        },
+        .text = "  \n "s,
+      },
+      "<div>"sv}));
 }
 
 }  // namespace stewkk::lexer
