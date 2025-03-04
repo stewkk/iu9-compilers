@@ -7,6 +7,8 @@ namespace stewkk::lexer {
 
 enum class DomainType { kOpeningTag, kClosingTag, kWhitespace, kLt, kGt, kAmp, kSymbol };
 
+std::string ToString(DomainType type);
+
 struct Domain {
   std::string pattern;
   DomainType type;

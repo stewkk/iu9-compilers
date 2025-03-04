@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <string_view>
 #include <iterator>
 
@@ -42,5 +43,6 @@ class Lexer {
     Matcher m_;
 };
 
+void OutputTokens(const std::string& text);
 
 }  // namespace stewkk::lexer

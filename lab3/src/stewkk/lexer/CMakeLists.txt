@@ -5,6 +5,7 @@ add_library(liblexer
   lexer.cpp
   matcher.cpp
   error.cpp
+  domain.cpp
 )
 add_library(stewkk::liblexer ALIAS liblexer)
 target_compile_features(liblexer PUBLIC cxx_std_20)
