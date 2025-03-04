@@ -20,7 +20,7 @@ namespace stewkk::lexer {
 
 // TODO: интерфейс на итераторах
 
-enum class DomainType { kOpeningTag, kClosingTag, kWhitespace };
+enum class DomainType { kOpeningTag, kClosingTag, kWhitespace, kLt, kGt, kAmp, kSymbol };
 
 struct Position {
   std::size_t line;
@@ -54,10 +54,14 @@ struct Domain {
   DomainType type;
 };
 
-static const std::array<Domain, 3> kDomainPatterns{{
+static const std::array<Domain, 7> kDomainPatterns{{
     {R"((<(?:\w|\d)+>))", DomainType::kOpeningTag},
     {R"((<\/(?:\w|\d)+>))", DomainType::kClosingTag},
     {R"((\s+))", DomainType::kWhitespace},
+    {R"((&lt;))", DomainType::kLt},
+    {R"((&gt;))", DomainType::kGt},
+    {R"((&amp;))", DomainType::kAmp},
+    {R"(([^&<>]))", DomainType::kSymbol},
 }};
 
 namespace {
@@ -164,6 +168,42 @@ TEST(MatcherTest, MatchesSpaces) {
         .text = "  \n "s,
       },
       "<div>"sv}));
+}
+
+TEST(MatcherTest, MatchesLt) {
+  auto text = "&lt;  \n <div>"sv;
+  Matcher l;
+
+  auto match = l.NextMatch(text, Position{1, 1});
+
+  ASSERT_THAT(match, Optional(Match{
+      Token{
+        .domain = DomainType::kLt,
+        .position = Position{
+          .line = 1,
+          .column = 1,
+        },
+        .text = "&lt;"s,
+      },
+      "  \n <div>"sv}));
+}
+
+TEST(MatcherTest, MatchesSymbol) {
+  auto text = "lt;  \n <div>"sv;
+  Matcher l;
+
+  auto match = l.NextMatch(text, Position{1, 1});
+
+  ASSERT_THAT(match, Optional(Match{
+      Token{
+        .domain = DomainType::kSymbol,
+        .position = Position{
+          .line = 1,
+          .column = 1,
+        },
+        .text = "l"s,
+      },
+      "t;  \n <div>"sv}));
 }
 
 }  // namespace stewkk::lexer
