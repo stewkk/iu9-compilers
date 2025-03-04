@@ -35,8 +35,8 @@ class Lexer {
     };
     static_assert(std::forward_iterator<Iterator>);
 
-    Iterator begin();
-    Iterator end();
+    const Iterator begin();
+    const Iterator end();
 
   private:
     std::string text_;

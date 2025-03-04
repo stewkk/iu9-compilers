@@ -75,9 +75,9 @@ Iterator Iterator::operator++(int) {
 
 bool Iterator::operator==(const Iterator& other) const { return rest_ == other.rest_; }
 
-Iterator Lexer::begin() { return Iterator(text_, m_); }
+const Iterator Lexer::begin() { return Iterator(text_, m_); }
 
-Iterator Lexer::end() { return Iterator(); }
+const Iterator Lexer::end() { return Iterator(); }
 
 void OutputTokens(const std::string& text) {
     Lexer l(text);
