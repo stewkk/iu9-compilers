@@ -80,17 +80,17 @@ const Iterator Lexer::begin() { return Iterator(text_, m_); }
 const Iterator Lexer::end() { return Iterator(); }
 
 void OutputTokens(const std::string& text) {
-    Lexer l(text);
-    try {
-      for (const auto token : l) {
-        std::cout << std::format("{} ({},{}): {}", ToString(token.domain), token.position.line,
-                                 token.position.column, token.text)
-                  << std::endl;
-      }
-    } catch (const LexerError& e) {
-      std::cerr << std::format("syntax error ({},{})", e.GetPosition().line, e.GetPosition().column)
+  Lexer l(text);
+  try {
+    for (const auto token : l) {
+      std::cout << std::format("{} ({},{}): {}", ToString(token.domain), token.position.line,
+                               token.position.column, token.text)
                 << std::endl;
     }
+  } catch (const LexerError& e) {
+    std::cerr << std::format("syntax error ({},{})", e.GetPosition().line, e.GetPosition().column)
+              << std::endl;
+  }
 }
 
 }  // namespace stewkk::lexer

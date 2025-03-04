@@ -3,10 +3,10 @@
 #include <string_view>
 
 #include <stewkk/lexer/domain.hpp>
-#include <stewkk/lexer/token.hpp>
-#include <stewkk/lexer/matcher.hpp>
 #include <stewkk/lexer/error.hpp>
 #include <stewkk/lexer/lexer.hpp>
+#include <stewkk/lexer/matcher.hpp>
+#include <stewkk/lexer/token.hpp>
 
 using ::testing::Eq;
 using ::testing::Optional;

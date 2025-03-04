@@ -7,11 +7,12 @@
 namespace stewkk::lexer {
 
 class LexerError : public std::exception {
-  public:
-    explicit LexerError(Position pos);
-    Position GetPosition() const;
-  private:
-    Position pos_;
+public:
+  explicit LexerError(Position pos);
+  Position GetPosition() const;
+
+private:
+  Position pos_;
 };
 
 }  // namespace stewkk::lexer

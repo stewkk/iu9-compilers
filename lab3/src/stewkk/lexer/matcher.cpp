@@ -1,9 +1,9 @@
 #include <stewkk/lexer/matcher.hpp>
 
+#include <re2/re2.h>
 #include <range/v3/algorithm/max.hpp>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/zip.hpp>
-#include <re2/re2.h>
 
 namespace stewkk::lexer {
 
@@ -31,9 +31,8 @@ std::optional<TextMatch> TryMatch(std::string_view text, const std::string& patt
 std::optional<Match> Matcher::NextMatch(std::string_view text, Position pos) {
   const auto matches = kDomainPatterns
                        // Find matches in text
-                       | ranges::views::transform([&text](const auto& domain) {
-                           return TryMatch(text, domain.pattern);
-                         });
+                       | ranges::views::transform(
+                           [&text](const auto& domain) { return TryMatch(text, domain.pattern); });
 
   auto [match, domain] = ranges::max(ranges::views::zip(matches, kDomainPatterns), std::less(),
                                      [](const auto& match_with_domain) {
