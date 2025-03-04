@@ -5,7 +5,6 @@
 #include <string_view>
 #include <utility>
 #include <iterator>
-#include <tuple>
 
 #include <re2/re2.h>
 #include <range/v3/algorithm/max.hpp>
@@ -19,8 +18,6 @@ using std::string_literals::operator""s;
 using std::string_view_literals::operator""sv;
 
 namespace stewkk::lexer {
-
-// TODO: интерфейс на итераторах
 
 enum class DomainType { kOpeningTag, kClosingTag, kWhitespace, kLt, kGt, kAmp, kSymbol };
 
@@ -351,7 +348,7 @@ TEST(LexerTest, HandlesEOL) {
 }
 
 TEST(LexerTest, HandlesTwoEOL) {
-  Lexer l("<div> \n \n </div>");
+  Lexer l("<div> \n \n</div>");
   auto it = l.begin();
   it++;
   it++;
@@ -361,7 +358,7 @@ TEST(LexerTest, HandlesTwoEOL) {
         .domain = DomainType::kClosingTag,
         .position = Position{
           .line = 3,
-          .column = 2,
+          .column = 1,
         },
         .text = "</div>"s,
       }));
