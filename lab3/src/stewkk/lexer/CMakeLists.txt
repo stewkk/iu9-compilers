@@ -1,4 +1,5 @@
 include(FetchRe2)
+include(FetchRangeV3)
 
 add_library(liblexer
   lexer.cpp
@@ -17,7 +18,7 @@ target_include_directories(
 )
 target_compile_options(liblexer PRIVATE ${BASE_COMPILE_FLAGS})
 target_link_options(liblexer PRIVATE ${BASE_LINK_FLAGS})
-target_link_libraries(liblexer PRIVATE re2::re2)
+target_link_libraries(liblexer PRIVATE re2::re2 range-v3::range-v3)
 
 add_executable(lab3 main.cpp)
 target_compile_features(lab3 PRIVATE cxx_std_20)
