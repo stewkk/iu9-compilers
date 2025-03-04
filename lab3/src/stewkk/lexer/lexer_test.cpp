@@ -85,6 +85,21 @@ std::optional<TextMatch> TryMatch(std::string_view text, const std::string& patt
   };
 }
 
+Position NextPosition(Position pos, const std::string& token) {
+  auto it = token.begin();
+  while (true) {
+    auto prev = it;
+    it = std::find(it, token.end(), '\n');;
+    if (it == token.end()) {
+      pos.column += it - prev;
+      return pos;
+    }
+    pos.line += 1;
+    pos.column = 1;
+    it++;
+  }
+}
+
 }  // namespace
 
 std::optional<Match> Matcher::NextMatch(std::string_view text, Position pos) {
@@ -137,16 +152,18 @@ class Lexer {
       using value_type = Token;
 
       Iterator() : token_(), rest_() {}
-      Iterator(std::string_view rest, Matcher m) : token_(), rest_(std::move(rest)), m_(std::move(m)), pos_(Position{1, 1}) {
+      Iterator(std::string_view rest, Matcher m)
+          : token_(), rest_(std::move(rest)), m_(std::move(m)), pos_(Position{1, 1}) {
+        if (rest_.empty()) {
+          return;
+        }
         auto match = m_.NextMatch(rest_, pos_);
         if (!match.has_value()) {
-          token_ = Token{};
-          rest_ = std::string_view{};
-          return;
+          throw LexerError{std::move(pos_)};
         }
         token_ = match.value().match;
         rest_ = match.value().rest;
-        pos_.column += token_.text.size();
+        pos_ = NextPosition(pos_, token_.text);
       }
 
       Token operator*() const {
@@ -154,15 +171,17 @@ class Lexer {
       }
 
       Iterator& operator++() {
+        if (rest_.empty()) {
+          token_ = Token{};
+          return *this;
+        }
         auto match = m_.NextMatch(rest_, pos_);
         if (!match.has_value()) {
-          token_ = Token{};
-          rest_ = std::string_view{};
-          return *this;
+          throw LexerError{std::move(pos_)};
         }
         token_ = match.value().match;
         rest_ = match.value().rest;
-        pos_.column += token_.text.size();
+        pos_ = NextPosition(pos_, token_.text);
         return *this;
       }
 
@@ -173,7 +192,7 @@ class Lexer {
       }
 
       bool operator==(const Iterator& other) const {
-        return token_ == other.token_ && rest_ == other.rest_;
+        return rest_ == other.rest_;
       }
 
       Token token_;
@@ -312,6 +331,40 @@ TEST(LexerTest, IteratesOverTokens) {
   it++;
 
   ASSERT_THAT(it, Eq(l.end()));
+}
+
+TEST(LexerTest, HandlesEOL) {
+  Lexer l("<div> \n </div>");
+  auto it = l.begin();
+  it++;
+  it++;
+
+  ASSERT_THAT(*it, Eq(
+      Token{
+        .domain = DomainType::kClosingTag,
+        .position = Position{
+          .line = 2,
+          .column = 2,
+        },
+        .text = "</div>"s,
+      }));
+}
+
+TEST(LexerTest, HandlesTwoEOL) {
+  Lexer l("<div> \n \n </div>");
+  auto it = l.begin();
+  it++;
+  it++;
+
+  ASSERT_THAT(*it, Eq(
+      Token{
+        .domain = DomainType::kClosingTag,
+        .position = Position{
+          .line = 3,
+          .column = 2,
+        },
+        .text = "</div>"s,
+      }));
 }
 
 }  // namespace stewkk::lexer
