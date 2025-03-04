@@ -11,6 +11,8 @@
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/zip.hpp>
 
+#include <stewkk/lexer/domain.hpp>
+
 using ::testing::Eq;
 using ::testing::Optional;
 
@@ -18,8 +20,6 @@ using std::string_literals::operator""s;
 using std::string_view_literals::operator""sv;
 
 namespace stewkk::lexer {
-
-enum class DomainType { kOpeningTag, kClosingTag, kWhitespace, kLt, kGt, kAmp, kSymbol };
 
 struct Position {
   std::size_t line;
@@ -47,21 +47,6 @@ class Matcher {
 public:
   std::optional<Match> NextMatch(std::string_view text, Position pos);
 };
-
-struct Domain {
-  std::string pattern;
-  DomainType type;
-};
-
-static const std::array<Domain, 7> kDomainPatterns{{
-    {R"((<(?:\w|\d)+>))", DomainType::kOpeningTag},
-    {R"((<\/(?:\w|\d)+>))", DomainType::kClosingTag},
-    {R"((\s+))", DomainType::kWhitespace},
-    {R"((&lt;))", DomainType::kLt},
-    {R"((&gt;))", DomainType::kGt},
-    {R"((&amp;))", DomainType::kAmp},
-    {R"(([^&<>]))", DomainType::kSymbol},
-}};
 
 namespace {
 
