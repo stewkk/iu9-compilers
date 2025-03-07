@@ -1,6 +1,7 @@
 #include <gmock/gmock.h>
 
 #include <string_view>
+#include <tuple>
 
 #include <immer/vector.hpp>
 
@@ -18,11 +19,11 @@ struct Message {
     bool operator==(const Message&) const = default;
 };
 
-std::pair<immer::vector<Token>, immer::vector<Message>> Tokenize(std::string_view text) {
-    return std::make_pair(immer::vector<Token>{}, immer::vector<Message>{});
+std::tuple<immer::vector<Token>, immer::vector<Message>> Tokenize(std::string_view text) {
+    return std::make_tuple(immer::vector<Token>{}, immer::vector<Message>{});
 }
 
 TEST(LexerTest, Interface) {
-    ASSERT_THAT(Tokenize(""sv), Eq(std::make_pair(immer::vector<Token>{}, immer::vector<Message>{}))); }
+    ASSERT_THAT(Tokenize(""sv), Eq(std::make_tuple(immer::vector<Token>{}, immer::vector<Message>{}))); }
 
 }  // namespace stewkk::lexer
