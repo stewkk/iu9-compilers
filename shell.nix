@@ -15,9 +15,11 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
     pkgs.gopls
     pkgs.go_1_21
     pkgs.cmake
+    pkgs.icu.dev
   ];
 
   nativeBuildInputs = [
     pkgs.clang-tools_18
+    pkgs.icu.dev
   ];
 }
