@@ -15,6 +15,12 @@ target_include_directories(
 )
 target_compile_options(liblexer PRIVATE ${BASE_COMPILE_FLAGS})
 target_link_options(liblexer PRIVATE ${BASE_LINK_FLAGS})
+target_link_libraries(liblexer PRIVATE strong_type::strong_type)
+target_include_directories(liblexer SYSTEM PRIVATE
+  "${FETCHCONTENT_BASE_DIR}/immer-src"
+  "${FETCHCONTENT_BASE_DIR}/mach7-src/code"
+  "${FETCHCONTENT_BASE_DIR}/utfcpp-src/source"
+)
 
 add_executable(lab3 main.cpp)
 target_compile_features(lab3 PRIVATE cxx_std_20)
