@@ -5,7 +5,7 @@
 #include <variant>
 #include <tuple>
 
-#include <immer/vector.hpp>
+#include <immer/flex_vector.hpp>
 #include <strong_type/strong_type.hpp>
 
 #include <stewkk/lexer/token.hpp>
@@ -15,7 +15,7 @@ namespace stewkk::lexer {
 using Message = std::string;
 
 struct TokenizerStateData {
-  immer::vector<char32_t> token_prefix;
+  immer::flex_vector<char32_t> token_prefix;
   Position token_start;
   Position token_end;
 
@@ -34,8 +34,11 @@ using Eof = StateType<struct eof_>;
 using TokenizerState = std::variant<Whitespace, Str, Escape, Number, Ident, Eof>;
 
 using TokenizerOutput = std::tuple<TokenizerState, std::optional<Token>, std::optional<Message>>;
+using TokenizerStringOutput = std::tuple<TokenizerState, immer::flex_vector<Token>, immer::flex_vector<Message>>;
 
 TokenizerOutput Tokenize(
     char32_t code_point, const TokenizerState& state);
+
+TokenizerStringOutput Tokenize(std::string input, const TokenizerState& state);
 
 }  // namespace stewkk::lexer
