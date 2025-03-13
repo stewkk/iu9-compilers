@@ -74,6 +74,7 @@ TokenizerStringOutput Tokenize(std::string s, const TokenizerState& state) {
                        // TODO: utf8
                        const auto [next_state, token, message] = Tokenize(s.front(), state);
                        const auto [res_state, tokens, messages] = Tokenize(s.substr(1, s.size()-1), next_state);
+                       // TODO: monadic optional
                        const auto res_tokens = token.has_value() ? tokens.push_front(token.value()) : tokens;
                        const auto res_messages = message.has_value() ? messages.push_front(message.value()) : messages;
                        return std::make_tuple(res_state, res_tokens, res_messages);

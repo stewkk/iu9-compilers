@@ -36,6 +36,7 @@ TEST(LexerTest, TokenizeString) {
                        .token_end = Position{0, 0},
                    }));
 
+  // TODO: remove
   const auto state = std::get<Number>(state_variant).value_of();
 
   std::cout << "prefix: ";
