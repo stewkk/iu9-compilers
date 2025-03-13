@@ -1,7 +1,9 @@
 #include <stewkk/lexer/lexer.hpp>
 
+#include <stdexcept>
+
 #include <utf8.h>
-#include <mach7/match.hpp>
+#include <mach7/type_switchN-patterns.hpp> // Support for N-ary Match statement on patterns
 #include <mach7/patterns/n+k.hpp>          // Generalized n+k patterns
 #include <mach7/patterns/predicate.hpp>    // Support for predicate patterns
 #include <mach7/patterns/primitive.hpp>    // Wildcard, variable and value patterns
@@ -11,18 +13,36 @@ namespace stewkk::lexer {
 namespace {
 
 Position NextPosition(Position pos, char32_t code_point) {
-  return std::iswspace(code_point) ? Position{.line = pos.line + 1, .column = pos.column}
+  return code_point == '\n' ? Position{.line = pos.line + 1, .column = pos.column}
                                    : Position{.line = pos.line, .column = pos.column + 1};
+}
+
+bool IsSpace(char32_t c) {
+    return std::iswspace(c);
+}
+
+bool IsDigit(char32_t c) {
+    return std::iswdigit(c);
 }
 
 TokenizerOutput HandleState(
     char32_t code_point, const Whitespace& state) {
-  return std::make_tuple(Number(TokenizerStateData{
-                             .token_prefix = state.value_of().token_prefix.push_back(code_point),
+    Match(code_point) {
+        Case(IsSpace) return std::make_tuple(Whitespace(TokenizerStateData{
+                             .token_prefix = immer::flex_vector<char32_t>{},
                              .token_start = state.value_of().token_start,
                              .token_end = NextPosition(state.value_of().token_end, code_point),
                          }),
                          std::nullopt, std::nullopt);
+        Case(IsDigit) return std::make_tuple(Number(TokenizerStateData{
+                             .token_prefix = state.value_of().token_prefix.push_back(code_point),
+                             .token_start = state.value_of().token_end,
+                             .token_end = NextPosition(state.value_of().token_end, code_point),
+                         }),
+                         std::nullopt, std::nullopt);
+    }
+    EndMatch
+    throw std::logic_error{"unreachable"};
 }
 
 TokenizerOutput HandleState(
