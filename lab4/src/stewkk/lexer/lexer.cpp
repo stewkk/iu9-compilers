@@ -5,9 +5,7 @@
 
 #include <utf8.h>
 #include <mach7/type_switchN-patterns.hpp> // Support for N-ary Match statement on patterns
-#include <mach7/patterns/n+k.hpp>          // Generalized n+k patterns
 #include <mach7/patterns/predicate.hpp>    // Support for predicate patterns
-#include <mach7/patterns/primitive.hpp>    // Wildcard, variable and value patterns
 
 namespace stewkk::lexer {
 
@@ -50,34 +48,36 @@ TokenizerOutput HandleState(
   auto IsIdent = std::bind(Any<decltype(IsSpecial), decltype(IsAlpha)>, std::placeholders::_1,
                            IsSpecial, IsAlpha);
   auto IsIdentRef = std::cref(IsIdent);
+  const auto token_start = state.value_of().token_end;
+  const auto token_end = NextPosition(state.value_of().token_end, code_point);
 
   Match(code_point) {
     Case(IsSpace) return std::make_tuple(
         Whitespace(TokenizerStateData{
             .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = state.value_of().token_start,
-            .token_end = NextPosition(state.value_of().token_end, code_point),
+            .token_start = token_start,
+            .token_end = token_end,
         }),
         std::nullopt, std::nullopt);
     Case(IsDigit) return std::make_tuple(
         Number(TokenizerStateData{
             .token_prefix = state.value_of().token_prefix.push_back(code_point),
-            .token_start = state.value_of().token_end,
-            .token_end = NextPosition(state.value_of().token_end, code_point),
+            .token_start = token_start,
+            .token_end = token_end,
         }),
         std::nullopt, std::nullopt);
     Case('"') return std::make_tuple(
         Str(TokenizerStateData{
             .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = state.value_of().token_end,
-            .token_end = NextPosition(state.value_of().token_end, code_point),
+            .token_start = token_start,
+            .token_end = token_end,
         }),
         std::nullopt, std::nullopt);
     Case(IsIdentRef) return std::make_tuple(
         Ident(TokenizerStateData{
             .token_prefix = state.value_of().token_prefix.push_back(code_point),
-            .token_start = state.value_of().token_end,
-            .token_end = NextPosition(state.value_of().token_end, code_point),
+            .token_start = token_start,
+            .token_end = token_end,
         }),
         std::nullopt, std::nullopt);
   }
@@ -85,7 +85,25 @@ TokenizerOutput HandleState(
 }
 
 TokenizerOutput HandleState(
-    char32_t code_point, const Str& state) {}
+    char32_t code_point, const Str& state) {
+  Match(code_point) {
+    Case('\\') return std::make_tuple(
+        Escape(TokenizerStateData{
+            .token_prefix = state.value_of().token_prefix,
+            .token_start = state.value_of().token_start,
+            .token_end = NextPosition(state.value_of().token_end, code_point),
+        }),
+        std::nullopt, std::nullopt);
+    Case('"') return std::make_tuple(
+        Whitespace(TokenizerStateData{
+            .token_prefix = immer::flex_vector<char32_t>{},
+            .token_start = state.value_of().token_end,
+            .token_end = NextPosition(state.value_of().token_end, code_point),
+        }),
+        std::nullopt /* TODO: token here */, std::nullopt);
+  }
+  EndMatch throw std::logic_error{"unreachable"};
+}
 
 TokenizerOutput HandleState(
     char32_t code_point, const Escape& state) {}

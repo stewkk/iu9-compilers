@@ -2,6 +2,6 @@
 
 namespace stewkk::lexer {
 
-enum class DomainType { kInteger };
+enum class DomainType { kInteger, kStr, kIdent };
 
 }  // namespace stewkk::lexer
