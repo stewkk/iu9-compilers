@@ -22,12 +22,12 @@ target_include_directories(liblexer SYSTEM PRIVATE
   "${FETCHCONTENT_BASE_DIR}/utfcpp-src/source"
 )
 
-add_executable(lab3 main.cpp)
-target_compile_features(lab3 PRIVATE cxx_std_20)
-set_target_properties(lab3 PROPERTIES
+add_executable(lab4 main.cpp)
+target_compile_features(lab4 PRIVATE cxx_std_20)
+set_target_properties(lab4 PROPERTIES
   CXX_STANDART 20
   CXX_STANDART_REQUIRED YES
   CXX_EXTENSIONS YES
 )
-target_compile_options(lab3 PRIVATE ${BASE_COMPILE_FLAGS})
-target_link_libraries(lab3 PRIVATE liblexer)
+target_compile_options(lab4 PRIVATE ${BASE_COMPILE_FLAGS})
+target_link_libraries(lab4 PRIVATE liblexer)
