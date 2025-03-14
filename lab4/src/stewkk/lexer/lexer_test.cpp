@@ -30,6 +30,7 @@ TEST(LexerTest, TokenizeSymbol) {
 }
 
 TEST(LexerTest, TokenizeString) {
+  // TODO: remove
   const auto [state_variant, tokens, messages] = Tokenize("  0"s, Whitespace(TokenizerStateData{
                        .token_prefix = immer::flex_vector<char32_t>{},
                        .token_start = Position{0, 0},
@@ -55,6 +56,34 @@ TEST(LexerTest, TokenizeString) {
                                })),
               Eq(std::make_tuple(TokenizerState(Number(TokenizerStateData{
                                      .token_prefix = immer::flex_vector<char32_t>{'0'},
+                                     .token_start = Position{0, 2},
+                                     .token_end = Position{0, 3},
+                                 })),
+                                 immer::flex_vector<Token>{}, immer::flex_vector<Message>{})));
+}
+
+TEST(LexerTest, TokenizeQuote) {
+  ASSERT_THAT(Tokenize("  \""s, Whitespace(TokenizerStateData{
+                                   .token_prefix = immer::flex_vector<char32_t>{},
+                                   .token_start = Position{0, 0},
+                                   .token_end = Position{0, 0},
+                               })),
+              Eq(std::make_tuple(TokenizerState(Str(TokenizerStateData{
+                                     .token_prefix = immer::flex_vector<char32_t>{},
+                                     .token_start = Position{0, 2},
+                                     .token_end = Position{0, 3},
+                                 })),
+                                 immer::flex_vector<Token>{}, immer::flex_vector<Message>{})));
+}
+
+TEST(LexerTest, TokenizeIdent) {
+  ASSERT_THAT(Tokenize("  Y"s, Whitespace(TokenizerStateData{
+                                   .token_prefix = immer::flex_vector<char32_t>{},
+                                   .token_start = Position{0, 0},
+                                   .token_end = Position{0, 0},
+                               })),
+              Eq(std::make_tuple(TokenizerState(Ident(TokenizerStateData{
+                                     .token_prefix = immer::flex_vector<char32_t>{'Y'},
                                      .token_start = Position{0, 2},
                                      .token_end = Position{0, 3},
                                  })),
