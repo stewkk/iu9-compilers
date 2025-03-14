@@ -58,7 +58,7 @@ TEST(LexerTest, TokenizeString) {
                                      .token_start = Position{0, 2},
                                      .token_end = Position{0, 3},
                                  })),
-                                 immer::flex_vector<Token>{}, immer::flex_vector<Message>{})));
+                                 Tokens{}, Messages{})));
 }
 
 TEST(LexerTest, TokenizeQuote) {
@@ -72,7 +72,7 @@ TEST(LexerTest, TokenizeQuote) {
                                      .token_start = Position{0, 2},
                                      .token_end = Position{0, 3},
                                  })),
-                                 immer::flex_vector<Token>{}, immer::flex_vector<Message>{})));
+                                 Tokens{}, Messages{})));
 }
 
 TEST(LexerTest, TokenizeIdent) {
@@ -86,7 +86,7 @@ TEST(LexerTest, TokenizeIdent) {
                                      .token_start = Position{0, 2},
                                      .token_end = Position{0, 3},
                                  })),
-                                 immer::flex_vector<Token>{}, immer::flex_vector<Message>{})));
+                                 Tokens{}, Messages{})));
 }
 
 }  // namespace stewkk::lexer

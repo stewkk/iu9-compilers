@@ -33,8 +33,11 @@ using Eof = StateType<struct eof_>;
 
 using TokenizerState = std::variant<Whitespace, Str, Escape, Number, Ident, Eof>;
 
+using Tokens = immer::flex_vector<Token>;
+using Messages = immer::flex_vector<Message>;
+
 using TokenizerOutput = std::tuple<TokenizerState, std::optional<Token>, std::optional<Message>>;
-using TokenizerStringOutput = std::tuple<TokenizerState, immer::flex_vector<Token>, immer::flex_vector<Message>>;
+using TokenizerStringOutput = std::tuple<TokenizerState, Tokens, Messages>;
 
 TokenizerOutput Tokenize(
     char32_t code_point, const TokenizerState& state);

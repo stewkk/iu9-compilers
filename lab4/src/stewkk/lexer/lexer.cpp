@@ -50,6 +50,7 @@ TokenizerOutput HandleState(
   auto IsIdentRef = std::cref(IsIdent);
   const auto token_start = state.value_of().token_end;
   const auto token_end = NextPosition(state.value_of().token_end, code_point);
+  const auto token_prefix = state.value_of().token_prefix;
 
   Match(code_point) {
     Case(IsSpace) return std::make_tuple(
@@ -61,7 +62,7 @@ TokenizerOutput HandleState(
         std::nullopt, std::nullopt);
     Case(IsDigit) return std::make_tuple(
         Number(TokenizerStateData{
-            .token_prefix = state.value_of().token_prefix.push_back(code_point),
+            .token_prefix = token_prefix.push_back(code_point),
             .token_start = token_start,
             .token_end = token_end,
         }),
@@ -75,7 +76,7 @@ TokenizerOutput HandleState(
         std::nullopt, std::nullopt);
     Case(IsIdentRef) return std::make_tuple(
         Ident(TokenizerStateData{
-            .token_prefix = state.value_of().token_prefix.push_back(code_point),
+            .token_prefix = token_prefix.push_back(code_point),
             .token_start = token_start,
             .token_end = token_end,
         }),
@@ -126,7 +127,7 @@ TokenizerOutput Tokenize(
 }
 
 TokenizerStringOutput Tokenize(std::string s, const TokenizerState& state) {
-  return s.empty() ? std::make_tuple(state, immer::flex_vector<Token>{}, immer::flex_vector<Message>{})
+  return s.empty() ? std::make_tuple(state, Tokens{}, Messages{})
                    : [&state, &s] {
                        // TODO: utf8
                        const auto [next_state, token, message] = Tokenize(s.front(), state);
