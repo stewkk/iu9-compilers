@@ -6,8 +6,6 @@
 
 #include <strong_type/strong_type.hpp>
 
-#include <stewkk/lexer/domain.hpp>
-
 namespace stewkk::lexer {
 
 struct Position {

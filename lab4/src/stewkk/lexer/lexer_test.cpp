@@ -5,7 +5,6 @@
 #include <variant>
 #include <utf8.h>
 
-#include <stewkk/lexer/domain.hpp>
 #include <stewkk/lexer/token.hpp>
 #include <stewkk/lexer/lexer.hpp>
 
