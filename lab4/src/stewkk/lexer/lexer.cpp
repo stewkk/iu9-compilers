@@ -157,7 +157,57 @@ TokenizerOutput HandleState(char32_t code_point, const Escape& state) {
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Number& state) {
-  throw std::logic_error{"unimplemented"};
+  const auto [token_prefix, token_start, token_end] = state.value_of();
+
+  auto IsSpecial = std::bind(Contains, U"$@", std::placeholders::_1);
+  auto IsIdent = std::bind(Any<decltype(IsSpecial), decltype(IsAlpha)>, std::placeholders::_1,
+                           IsSpecial, IsAlpha);
+  auto IsIdentRef = std::cref(IsIdent);
+
+  Match(code_point) {
+    Case(IsDigit) return std::make_tuple(
+        Number(TokenizerStateData{
+            .token_prefix = token_prefix.push_back(code_point),
+            .token_start = token_start,
+            .token_end = NextPosition(token_end, code_point),
+        }),
+        std::nullopt, std::nullopt);
+    Case('_') return std::make_tuple(
+        Number(TokenizerStateData{
+            .token_prefix = token_prefix,
+            .token_start = token_start,
+            .token_end = NextPosition(token_end, code_point),
+        }),
+        std::nullopt, std::nullopt);
+    Case(IsSpace) return std::make_tuple(
+        Whitespace(TokenizerStateData{
+            .token_prefix = immer::flex_vector<char32_t>{},
+            .token_start = token_end,
+            .token_end = NextPosition(token_end, code_point),
+        }),
+        IntegerToken(Coords{token_start, token_end}, std::stoll(ToString(token_prefix))),
+        std::nullopt);
+    Case(IsIdentRef) return std::make_tuple(
+        Ident(TokenizerStateData{
+            .token_prefix = immer::flex_vector<char32_t>{code_point},
+            .token_start = token_end,
+            .token_end = NextPosition(token_end, code_point),
+        }),
+        IntegerToken(
+            Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
+            std::stoll(ToString(token_prefix))),
+        std::nullopt);
+    Otherwise() return std::make_tuple(
+        Str(TokenizerStateData{
+            .token_prefix = token_prefix.push_back(code_point),
+            .token_start = token_start,
+            .token_end = NextPosition(token_end, code_point),
+        }),
+        std::nullopt,
+        std::format("Unknown symbol at ({}:{}): {}", token_end.line, token_end.column,
+                    ToString(code_point)));
+  }
+  EndMatch throw std::logic_error{"unreachable"};
 }
 
 TokenizerOutput HandleState(

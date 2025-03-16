@@ -128,4 +128,18 @@ TEST(LexerTest, TokenizeFullString) {
                          Tokens{StringLiteralToken(Coords{{0, 2}, {0, 13}}, "oa\to \" a")}, Messages{})));
 }
 
+TEST(LexerTest, TokenizeInteger) {
+  ASSERT_THAT(Tokenize("  123_999 "s, Whitespace(TokenizerStateData{
+                                   .token_prefix = immer::flex_vector<char32_t>{},
+                                   .token_start = Position{0, 0},
+                                   .token_end = Position{0, 0},
+                               })),
+              Eq(std::make_tuple(TokenizerState(Whitespace(TokenizerStateData{
+                                     .token_prefix = immer::flex_vector<char32_t>{},
+                                     .token_start = Position{0, 9},
+                                     .token_end = Position{0, 10},
+                                 })),
+                                 Tokens{IntegerToken(Coords{{0, 2}, {0, 8}}, 123999)}, Messages{})));
+}
+
 }  // namespace stewkk::lexer
