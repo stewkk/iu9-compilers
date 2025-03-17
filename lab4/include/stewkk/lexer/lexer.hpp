@@ -58,4 +58,6 @@ TokenizerStringOutput Tokenize(std::string input, TokenizerState state);
 
 std::string ToString(immer::flex_vector<char32_t> s);
 
+constexpr const int kEofMarker = -1;
+
 }  // namespace stewkk::lexer

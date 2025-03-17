@@ -154,4 +154,16 @@ TEST(LexerTest, TokenizeUnicodeString) {
                          Tokens{StringLiteralToken(Coords{{0, 0}, {0, 11}}, "я русский!")}, Messages{})));
 }
 
+TEST(LexerTest, TokenizeEOF) {
+  const auto [state, tokens, messages] = Tokenize("123"s, GetStartState());
+  ASSERT_THAT(Tokenize(kEofMarker, state),
+              Eq(std::make_tuple(TokenizerState(Eof(TokenizerStateData{
+                                     .token_prefix = immer::flex_vector<char32_t>{},
+                                     .token_start = Position{0, 3},
+                                     .prev = Position{0, 3},
+                                     .current = Position{0, 4},
+                                 })),
+                                 Token{IntegerToken(Coords{{0, 0}, {0, 2}}, 123)}, std::nullopt)));
+}
+
 }  // namespace stewkk::lexer

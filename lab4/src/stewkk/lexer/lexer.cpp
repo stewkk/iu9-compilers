@@ -10,6 +10,8 @@
 
 namespace stewkk::lexer {
 
+// TODO: проверить, что везде есть Otherwise и обработка EOF
+
 namespace {
 
 Position NextPosition(Position pos, char32_t code_point) {
@@ -133,6 +135,9 @@ TokenizerOutput HandleState(char32_t code_point, const Number& state) {
     Case(IsIdentFirstNotUnderscore) return {
         Ident(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
         IntegerToken(Coords{token_start, prev}, std::stoll(ToString(token_prefix))), std::nullopt};
+    Case(kEofMarker) return {
+        Eof(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
+        IntegerToken(Coords{token_start, prev}, std::stoll(ToString(token_prefix))), std::nullopt};
     Otherwise() return {Number(state.value_of().MovePositionBy(code_point)), std::nullopt,
                         std::format("Unknown symbol at ({}:{}): {}", current.line, current.column,
                                     ToString({code_point}))};
@@ -183,7 +188,7 @@ TokenizerOutput HandleState(
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Eof& state) {
-  throw std::logic_error{"TODO: unimplemented"};
+  throw std::logic_error{"HandleState called from EOF state"};
 }
 
 std::pair<char32_t, std::string> NextCodePoint(std::string s) {
@@ -297,6 +302,5 @@ std::string ToString(immer::flex_vector<char32_t> s) {
   }
   return res;
 }
-
 
 }  // namespace stewkk::lexer
