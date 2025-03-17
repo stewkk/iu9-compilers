@@ -185,7 +185,9 @@ TokenizerOutput HandleState(char32_t code_point, const Number& state) {
             .token_start = token_end,
             .token_end = NextPosition(token_end, code_point),
         }),
-        IntegerToken(Coords{token_start, token_end}, std::stoll(ToString(token_prefix))),
+        IntegerToken(
+            Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
+            std::stoll(ToString(token_prefix))),
         std::nullopt);
     Case(IsIdentRef) return std::make_tuple(
         Ident(TokenizerStateData{
@@ -197,15 +199,14 @@ TokenizerOutput HandleState(char32_t code_point, const Number& state) {
             Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
             std::stoll(ToString(token_prefix))),
         std::nullopt);
-    Otherwise() return std::make_tuple(
-        Str(TokenizerStateData{
-            .token_prefix = token_prefix.push_back(code_point),
-            .token_start = token_start,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt,
-        std::format("Unknown symbol at ({}:{}): {}", token_end.line, token_end.column,
-                    ToString(code_point)));
+    Otherwise() return std::make_tuple(Str(TokenizerStateData{
+                                           .token_prefix = token_prefix.push_back(code_point),
+                                           .token_start = token_start,
+                                           .token_end = NextPosition(token_end, code_point),
+                                       }),
+                                       std::nullopt,
+                                       std::format("Unknown symbol at ({}:{}): {}", token_end.line,
+                                                   token_end.column, ToString(code_point)));
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
