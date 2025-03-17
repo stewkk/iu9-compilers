@@ -33,6 +33,8 @@ using Eof = StateType<struct eof_>;
 
 using TokenizerState = std::variant<Whitespace, Str, Escape, Number, Ident, Eof>;
 
+std::string GetName(TokenizerState state);
+
 using Tokens = immer::flex_vector<Token>;
 using Messages = immer::flex_vector<Message>;
 
@@ -40,8 +42,8 @@ using TokenizerOutput = std::tuple<TokenizerState, std::optional<Token>, std::op
 using TokenizerStringOutput = std::tuple<TokenizerState, Tokens, Messages>;
 
 TokenizerOutput Tokenize(
-    char32_t code_point, const TokenizerState& state);
+    char32_t code_point, TokenizerState state);
 
-TokenizerStringOutput Tokenize(std::string input, const TokenizerState& state);
+TokenizerStringOutput Tokenize(std::string input, TokenizerState state);
 
 }  // namespace stewkk::lexer

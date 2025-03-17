@@ -38,4 +38,8 @@ using IdentToken = TokenType<struct ident_token_, std::size_t>;
 
 using Token = std::variant<StringLiteralToken, IntegerToken, IdentToken>;
 
+std::string GetName(Token token);
+
+std::string ToString(Token token);
+
 }  // namespace stewkk::lexer

@@ -2,12 +2,11 @@
 
 #include <stdexcept>
 #include <functional>
-// TODO: remove
-#include <iostream>
 
 #include <utf8.h>
 #include <mach7/type_switchN-patterns.hpp> // Support for N-ary Match statement on patterns
 #include <mach7/patterns/predicate.hpp>    // Support for predicate patterns
+#include <mach7/patterns/constructor.hpp>  // Support for constructor patterns
 
 namespace stewkk::lexer {
 
@@ -273,12 +272,12 @@ TokenizerOutput HandleState(char32_t code_point, const Eof& state) {
 }  // namespace
 
 TokenizerOutput Tokenize(
-    char32_t code_point, const TokenizerState& state) {
+    char32_t code_point, TokenizerState state) {
   return std::visit([&code_point](const auto& state) { return HandleState(code_point, state); },
                     state);
 }
 
-TokenizerStringOutput Tokenize(std::string s, const TokenizerState& state) {
+TokenizerStringOutput Tokenize(std::string s, TokenizerState state) {
   return s.empty() ? std::make_tuple(state, Tokens{}, Messages{})
                    : [&state, &s] {
                        // TODO: utf8
@@ -289,6 +288,17 @@ TokenizerStringOutput Tokenize(std::string s, const TokenizerState& state) {
                        const auto res_messages = message.has_value() ? messages.push_front(message.value()) : messages;
                        return std::make_tuple(res_state, res_tokens, res_messages);
                      }();
+}
+
+std::string GetName(TokenizerState state) {
+  Match(state) {
+    Case(mch::C<Whitespace>()) return "WS";
+    Case(mch::C<Str>()) return "STR";
+    Case(mch::C<Escape>()) return "ESCAPE";
+    Case(mch::C<Number>()) return "INTEGER";
+    Case(mch::C<Ident>()) return "IDENT";
+    Case(mch::C<Eof>()) return "EOF";
+  } EndMatch throw std::logic_error{"unreachable"};
 }
 
 }  // namespace stewkk::lexer

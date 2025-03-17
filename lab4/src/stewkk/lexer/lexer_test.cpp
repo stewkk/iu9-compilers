@@ -1,8 +1,8 @@
 #include <gmock/gmock.h>
 
-// TODO: remove
 #include <iostream>
 #include <variant>
+
 #include <utf8.h>
 
 #include <stewkk/lexer/token.hpp>
@@ -14,14 +14,41 @@ using std::string_literals::operator""s;
 
 namespace stewkk::lexer {
 
-// TODO: refactor tests
+std::string ToString(immer::flex_vector<char32_t> s) {
+  return utf8::utf32to8(std::u32string(std::begin(s), std::end(s)));
+}
+
+TokenizerStringOutput PrintState(const TokenizerStringOutput out) {
+  const auto [state_variant, tokens, messages] = out;
+  std::cout << GetName(state_variant) << std::endl;
+  std::visit(
+      [](const auto& state) {
+        const auto& state_value = state.value_of();
+        std::cout << std::format("    prefix: '{}'\n", ToString(state_value.token_prefix));
+        std::cout << std::format("    token start: {} {}\n", state_value.token_start.line,
+                                 state_value.token_start.column);
+        std::cout << std::format("    token end: {} {}\n", state_value.token_end.line, state_value.token_end.column);
+      },
+      state_variant);
+  for (const auto& token : tokens) {
+    std::cout << "    " << ToString(token) << std::endl;
+  }
+  for (const auto& message : messages) {
+    std::cout << "    " << message << std::endl;
+  }
+  return out;
+}
+
+TokenizerState GetStartState() {
+  return Whitespace(TokenizerStateData{
+      .token_prefix = immer::flex_vector<char32_t>{},
+      .token_start = Position{0, 0},
+      .token_end = Position{0, 0},
+  });
+}
 
 TEST(LexerTest, TokenizeSymbol) {
-  ASSERT_THAT(Tokenize('0', Whitespace(TokenizerStateData{
-                                .token_prefix = immer::flex_vector<char32_t>{},
-                                .token_start = Position{0, 0},
-                                .token_end = Position{0, 0},
-                            })),
+  ASSERT_THAT(Tokenize('0', GetStartState()),
               Eq(std::make_tuple(TokenizerState(Number(TokenizerStateData{
                                      .token_prefix = immer::flex_vector<char32_t>{'0'},
                                      .token_start = Position{0, 0},
@@ -31,30 +58,7 @@ TEST(LexerTest, TokenizeSymbol) {
 }
 
 TEST(LexerTest, TokenizeString) {
-  // TODO: remove
-  const auto [state_variant, tokens, messages] = Tokenize("  0"s, Whitespace(TokenizerStateData{
-                       .token_prefix = immer::flex_vector<char32_t>{},
-                       .token_start = Position{0, 0},
-                       .token_end = Position{0, 0},
-                   }));
-
-  // TODO: remove
-  const auto state = std::get<Number>(state_variant).value_of();
-
-  std::cout << "prefix: ";
-  for (const auto& el : state.token_prefix) {
-    std::cout << static_cast<char>(el) << ' ';
-  }
-  std::cout << std::endl;
-
-  std::cout << std::format("token start: {} {}", state.token_start.line, state.token_start.column) << std::endl;
-  std::cout << std::format("token end: {} {}", state.token_end.line, state.token_end.column) << std::endl;
-
-  ASSERT_THAT(Tokenize("  0"s, Whitespace(TokenizerStateData{
-                                   .token_prefix = immer::flex_vector<char32_t>{},
-                                   .token_start = Position{0, 0},
-                                   .token_end = Position{0, 0},
-                               })),
+  ASSERT_THAT(Tokenize("  0"s, GetStartState()),
               Eq(std::make_tuple(TokenizerState(Number(TokenizerStateData{
                                      .token_prefix = immer::flex_vector<char32_t>{'0'},
                                      .token_start = Position{0, 2},
@@ -64,11 +68,7 @@ TEST(LexerTest, TokenizeString) {
 }
 
 TEST(LexerTest, TokenizeQuote) {
-  ASSERT_THAT(Tokenize("  \""s, Whitespace(TokenizerStateData{
-                                   .token_prefix = immer::flex_vector<char32_t>{},
-                                   .token_start = Position{0, 0},
-                                   .token_end = Position{0, 0},
-                               })),
+  ASSERT_THAT(Tokenize("  \""s, GetStartState()),
               Eq(std::make_tuple(TokenizerState(Str(TokenizerStateData{
                                      .token_prefix = immer::flex_vector<char32_t>{},
                                      .token_start = Position{0, 2},
@@ -78,11 +78,7 @@ TEST(LexerTest, TokenizeQuote) {
 }
 
 TEST(LexerTest, TokenizeIdent) {
-  ASSERT_THAT(Tokenize("  Y"s, Whitespace(TokenizerStateData{
-                                   .token_prefix = immer::flex_vector<char32_t>{},
-                                   .token_start = Position{0, 0},
-                                   .token_end = Position{0, 0},
-                               })),
+  ASSERT_THAT(Tokenize("  Y"s, GetStartState()),
               Eq(std::make_tuple(TokenizerState(Ident(TokenizerStateData{
                                      .token_prefix = immer::flex_vector<char32_t>{'Y'},
                                      .token_start = Position{0, 2},
@@ -92,36 +88,8 @@ TEST(LexerTest, TokenizeIdent) {
 }
 
 TEST(LexerTest, TokenizeFullString) {
-  // TODO: remove
-  const auto [state_variant, tokens, messages] = Tokenize("  \"oa\\to \\\" a\" "s, Whitespace(TokenizerStateData{
-                       .token_prefix = immer::flex_vector<char32_t>{},
-                       .token_start = Position{0, 0},
-                       .token_end = Position{0, 0},
-                   }));
-
-  // TODO: remove
-  const auto state = std::get<Whitespace>(state_variant).value_of();
-
-  std::cout << "prefix: ";
-  for (const auto& el : state.token_prefix) {
-    std::cout << static_cast<char>(el) << ' ';
-  }
-  std::cout << std::endl;
-
-  std::cout << std::format("token start: {} {}", state.token_start.line, state.token_start.column) << std::endl;
-  std::cout << std::format("token end: {} {}", state.token_end.line, state.token_end.column) << std::endl;
-
-  auto token = std::get<StringLiteralToken>(tokens[0]).value_of();
-  std::cout << std::format("token attr: {}, token coords: ({}:{})-({}:{})", token.attr, token.coords.start.line,
-                           token.coords.start.column, token.coords.end.line,
-                           token.coords.end.column) << std::endl;
-
   ASSERT_THAT(
-      Tokenize("  \"oa\\to \\\" a\" "s, Whitespace(TokenizerStateData{
-                                   .token_prefix = immer::flex_vector<char32_t>{},
-                                   .token_start = Position{0, 0},
-                                   .token_end = Position{0, 0},
-                               })),
+      Tokenize("  \"oa\\to \\\" a\" "s, GetStartState()),
       Eq(std::make_tuple(TokenizerState(Whitespace(TokenizerStateData{
                              .token_prefix = immer::flex_vector<char32_t>{},
                              .token_start = Position{0, 14},
@@ -131,30 +99,6 @@ TEST(LexerTest, TokenizeFullString) {
 }
 
 TEST(LexerTest, TokenizeInteger) {
-  // TODO: remove
-  const auto [state_variant, tokens, messages] = Tokenize("  123_999 "s, Whitespace(TokenizerStateData{
-                       .token_prefix = immer::flex_vector<char32_t>{},
-                       .token_start = Position{0, 0},
-                       .token_end = Position{0, 0},
-                   }));
-
-  // TODO: remove
-  const auto state = std::get<Whitespace>(state_variant).value_of();
-
-  std::cout << "prefix: ";
-  for (const auto& el : state.token_prefix) {
-    std::cout << static_cast<char>(el) << ' ';
-  }
-  std::cout << std::endl;
-
-  std::cout << std::format("token start: {} {}", state.token_start.line, state.token_start.column) << std::endl;
-  std::cout << std::format("token end: {} {}", state.token_end.line, state.token_end.column) << std::endl;
-
-  auto token = std::get<IntegerToken>(tokens[0]).value_of();
-  std::cout << std::format("token attr: {}, token coords: ({}:{})-({}:{})", token.attr, token.coords.start.line,
-                           token.coords.start.column, token.coords.end.line,
-                           token.coords.end.column) << std::endl;
-
   ASSERT_THAT(Tokenize("  123_999 "s, Whitespace(TokenizerStateData{
                                    .token_prefix = immer::flex_vector<char32_t>{},
                                    .token_start = Position{0, 0},
@@ -169,30 +113,6 @@ TEST(LexerTest, TokenizeInteger) {
 }
 
 TEST(LexerTest, TokenizeIdentFull) {
-  // TODO: remove
-  const auto [state_variant, tokens, messages] = Tokenize("  Y1@_123 "s, Whitespace(TokenizerStateData{
-                       .token_prefix = immer::flex_vector<char32_t>{},
-                       .token_start = Position{0, 0},
-                       .token_end = Position{0, 0},
-                   }));
-
-  // TODO: remove
-  const auto state = std::get<Whitespace>(state_variant).value_of();
-
-  std::cout << "prefix: ";
-  for (const auto& el : state.token_prefix) {
-    std::cout << static_cast<char>(el) << ' ';
-  }
-  std::cout << std::endl;
-
-  std::cout << std::format("token start: {} {}", state.token_start.line, state.token_start.column) << std::endl;
-  std::cout << std::format("token end: {} {}", state.token_end.line, state.token_end.column) << std::endl;
-
-  auto token = std::get<IdentToken>(tokens[0]).value_of();
-  std::cout << std::format("token attr: {}, token coords: ({}:{})-({}:{})", token.attr, token.coords.start.line,
-                           token.coords.start.column, token.coords.end.line,
-                           token.coords.end.column) << std::endl;
-
   ASSERT_THAT(Tokenize("  Y1@_123 "s, Whitespace(TokenizerStateData{
                                    .token_prefix = immer::flex_vector<char32_t>{},
                                    .token_start = Position{0, 0},
@@ -207,25 +127,6 @@ TEST(LexerTest, TokenizeIdentFull) {
 }
 
 TEST(LexerTest, TokenizeError) {
-  // TODO: remove
-  const auto [state_variant, tokens, messages] = Tokenize("  * "s, Whitespace(TokenizerStateData{
-                       .token_prefix = immer::flex_vector<char32_t>{},
-                       .token_start = Position{0, 0},
-                       .token_end = Position{0, 0},
-                   }));
-
-  // TODO: remove
-  const auto state = std::get<Whitespace>(state_variant).value_of();
-
-  std::cout << "prefix: ";
-  for (const auto& el : state.token_prefix) {
-    std::cout << static_cast<char>(el) << ' ';
-  }
-  std::cout << std::endl;
-
-  std::cout << std::format("token start: {} {}", state.token_start.line, state.token_start.column) << std::endl;
-  std::cout << std::format("token end: {} {}", state.token_end.line, state.token_end.column) << std::endl;
-
   ASSERT_THAT(Tokenize("  * "s, Whitespace(TokenizerStateData{
                                     .token_prefix = immer::flex_vector<char32_t>{},
                                     .token_start = Position{0, 0},
