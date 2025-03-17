@@ -10,8 +10,6 @@
 
 namespace stewkk::lexer {
 
-// TODO: проверить, что везде есть Otherwise и обработка EOF
-
 namespace {
 
 Position NextPosition(Position pos, char32_t code_point) {
@@ -67,6 +65,9 @@ TokenizerOutput HandleState(
                                          .MovePositionBy(code_point)
                                          .SetTokenStart(current)),
                                std::nullopt, std::nullopt};
+    Case(kEofMarker) return {
+        Eof(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
+        std::nullopt, std::nullopt};
     Otherwise() return {Whitespace(state.value_of().MovePositionBy(code_point)), std::nullopt,
                         std::format("Unknown symbol at ({}:{}): {}", current.line, current.column,
                                     ToString({code_point}))};
@@ -87,6 +88,12 @@ TokenizerOutput HandleState(char32_t code_point, const Str& state) {
                                      .MovePositionBy(code_point)),
                       StringLiteralToken(Coords{token_start, current}, ToString(token_prefix)),
                       std::nullopt};
+    Case(kEofMarker) return {Eof(state.value_of()
+                                     .DiscardPrefix()
+                                     .SetTokenStart(current)
+                                     .MovePositionBy(code_point)),
+                      StringLiteralToken(Coords{token_start, prev}, ToString(token_prefix)),
+                      std::format("Expected closing \" at ({}:{})", current.line, current.column)};
     Otherwise() return {Str(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
                         std::nullopt, std::nullopt};
   }
@@ -105,7 +112,12 @@ TokenizerOutput HandleState(char32_t code_point, const Escape& state) {
     Case('\\') return {Str(state.value_of().AddToPrefix('\\').MovePositionBy(code_point)),
                                      std::nullopt, std::nullopt};
     Case('t') return {Str(state.value_of().AddToPrefix('\t').MovePositionBy(code_point)),
-                                     std::nullopt, std::nullopt};
+                      std::nullopt, std::nullopt};
+    Case(kEofMarker) return {
+        Eof(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
+        StringLiteralToken(Coords{token_start, prev}, ToString(token_prefix)),
+        std::format("Expected literal symbol and closing \" at ({}:{})", current.line,
+                    current.column)};
     Otherwise() return {Str(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
                         std::nullopt,
                         std::format("Unknown escape sequence at ({}:{}): \\{}", current.line,
@@ -180,6 +192,14 @@ TokenizerOutput HandleState(
     Case(IsIdent) return {
         Ident(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)), std::nullopt,
         std::nullopt};
+    Case(kEofMarker) return {Eof(state.value_of()
+                                     .DiscardPrefix()
+                                     .MovePositionBy(code_point)
+                                     .SetTokenStart(current)
+                                     .AddIdentIfNotExists(ToString(token_prefix))),
+                             IdentToken(Coords{token_start, prev},
+                                        GetIdentIndex(ident_to_index, ToString(token_prefix))),
+                             std::nullopt};
     Otherwise() return {Ident(state.value_of().MovePositionBy(code_point)), std::nullopt,
                         std::format("Unknown symbol at ({}:{}): {}", prev.line, prev.column,
                                     ToString({code_point}))};
