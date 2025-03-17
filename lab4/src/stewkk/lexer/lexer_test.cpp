@@ -14,10 +14,6 @@ using std::string_literals::operator""s;
 
 namespace stewkk::lexer {
 
-std::string ToString(immer::flex_vector<char32_t> s) {
-  return utf8::utf32to8(std::u32string(std::begin(s), std::end(s)));
-}
-
 TokenizerStringOutput PrintState(const TokenizerStringOutput out) {
   const auto [state_variant, tokens, messages] = out;
   std::cout << GetName(state_variant) << std::endl;
@@ -144,6 +140,18 @@ TEST(LexerTest, TokenizeError) {
                                  Messages{
                                      "Unknown symbol at (0:2): *",
                                  })));
+}
+
+TEST(LexerTest, TokenizeUnicodeString) {
+  ASSERT_THAT(
+      Tokenize("\"я русский!\""s, GetStartState()),
+      Eq(std::make_tuple(TokenizerState(Whitespace(TokenizerStateData{
+                             .token_prefix = immer::flex_vector<char32_t>{},
+                             .token_start = Position{0, 12},
+                             .prev = Position{0, 11},
+                             .current = Position{0, 12},
+                         })),
+                         Tokens{StringLiteralToken(Coords{{0, 0}, {0, 11}}, "я русский!")}, Messages{})));
 }
 
 }  // namespace stewkk::lexer

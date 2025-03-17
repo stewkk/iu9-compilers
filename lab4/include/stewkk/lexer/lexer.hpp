@@ -56,4 +56,6 @@ TokenizerOutput Tokenize(
 
 TokenizerStringOutput Tokenize(std::string input, TokenizerState state);
 
+std::string ToString(immer::flex_vector<char32_t> s);
+
 }  // namespace stewkk::lexer

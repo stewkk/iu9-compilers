@@ -17,10 +17,6 @@ Position NextPosition(Position pos, char32_t code_point) {
                             : Position{.line = pos.line, .column = pos.column + 1};
 }
 
-std::string ToString(immer::flex_vector<char32_t> s) {
-  return utf8::utf32to8(std::u32string(std::begin(s), std::end(s)));
-}
-
 bool IsSpace(char32_t c) { return std::iswspace(c); }
 
 bool IsDigit(char32_t c) { return std::iswdigit(c); }
@@ -190,6 +186,15 @@ TokenizerOutput HandleState(char32_t code_point, const Eof& state) {
   throw std::logic_error{"TODO: unimplemented"};
 }
 
+std::pair<char32_t, std::string> NextCodePoint(std::string s) {
+  auto b = std::begin(s);
+  auto e = std::end(s);
+
+  const char32_t next = utf8::next(b, e);
+
+  return {next, std::string(b, e)};
+}
+
 }  // namespace
 
 TokenizerOutput Tokenize(
@@ -201,9 +206,10 @@ TokenizerOutput Tokenize(
 TokenizerStringOutput Tokenize(std::string s, TokenizerState state) {
   return s.empty() ? std::make_tuple(state, Tokens{}, Messages{})
                    : [&state, &s] {
-                       // TODO: utf8
-                       const auto [next_state, token, message] = Tokenize(s.front(), state);
-                       const auto [res_state, tokens, messages] = Tokenize(s.substr(1, s.size()-1), next_state);
+                       const auto [code_point, rest] = NextCodePoint(s);
+
+                       const auto [next_state, token, message] = Tokenize(code_point, state);
+                       const auto [res_state, tokens, messages] = Tokenize(rest, next_state);
                        // TODO: monadic optional
                        const auto res_tokens = token.has_value() ? tokens.push_front(token.value()) : tokens;
                        const auto res_messages = message.has_value() ? messages.push_front(message.value()) : messages;
@@ -283,5 +289,14 @@ TokenizerStateData TokenizerStateData::AddIdentIfNotExists(std::string ident) co
       .index_to_ident = index_to_ident,
   };
 }
+
+std::string ToString(immer::flex_vector<char32_t> s) {
+  std::string res;
+  for (const auto& sym : s) {
+    utf8::append(sym, res);
+  }
+  return res;
+}
+
 
 }  // namespace stewkk::lexer
