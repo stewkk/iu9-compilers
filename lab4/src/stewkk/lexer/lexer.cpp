@@ -13,7 +13,7 @@ namespace stewkk::lexer {
 namespace {
 
 Position NextPosition(Position pos, char32_t code_point) {
-  return code_point == '\n' ? Position{.line = pos.line + 1, .column = pos.column}
+  return code_point == '\n' ? Position{.line = pos.line + 1, .column = 0}
                             : Position{.line = pos.line, .column = pos.column + 1};
 }
 
@@ -69,7 +69,7 @@ TokenizerOutput HandleState(
         Eof(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
         std::nullopt, std::nullopt};
     Otherwise() return {Whitespace(state.value_of().MovePositionBy(code_point)), std::nullopt,
-                        std::format("Unknown symbol at ({}:{}): {}", current.line, current.column,
+                        std::format("Unknown symbol at ({}:{}): {}", current.line+1, current.column+1,
                                     ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
@@ -93,7 +93,7 @@ TokenizerOutput HandleState(char32_t code_point, const Str& state) {
                                      .SetTokenStart(current)
                                      .MovePositionBy(code_point)),
                       StringLiteralToken(Coords{token_start, prev}, ToString(token_prefix)),
-                      std::format("Expected closing \" at ({}:{})", current.line, current.column)};
+                      std::format("Expected closing \" at ({}:{})", current.line+1, current.column+1)};
     Otherwise() return {Str(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
                         std::nullopt, std::nullopt};
   }
@@ -116,12 +116,12 @@ TokenizerOutput HandleState(char32_t code_point, const Escape& state) {
     Case(kEofMarker) return {
         Eof(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
         StringLiteralToken(Coords{token_start, prev}, ToString(token_prefix)),
-        std::format("Expected literal symbol and closing \" at ({}:{})", current.line,
-                    current.column)};
+        std::format("Expected literal symbol and closing \" at ({}:{})", current.line+1,
+                    current.column+1)};
     Otherwise() return {Str(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
                         std::nullopt,
-                        std::format("Unknown escape sequence at ({}:{}): \\{}", current.line,
-                                    current.column, ToString({code_point}))};
+                        std::format("Unknown escape sequence at ({}:{}): \\{}", current.line+1,
+                                    current.column+1, ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
@@ -151,7 +151,7 @@ TokenizerOutput HandleState(char32_t code_point, const Number& state) {
         Eof(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
         IntegerToken(Coords{token_start, prev}, std::stoll(ToString(token_prefix))), std::nullopt};
     Otherwise() return {Number(state.value_of().MovePositionBy(code_point)), std::nullopt,
-                        std::format("Unknown symbol at ({}:{}): {}", current.line, current.column,
+                        std::format("Unknown symbol at ({}:{}): {}", current.line+1, current.column+1,
                                     ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
@@ -201,7 +201,7 @@ TokenizerOutput HandleState(
                                         GetIdentIndex(ident_to_index, ToString(token_prefix))),
                              std::nullopt};
     Otherwise() return {Ident(state.value_of().MovePositionBy(code_point)), std::nullopt,
-                        std::format("Unknown symbol at ({}:{}): {}", prev.line, prev.column,
+                        std::format("Unknown symbol at ({}:{}): {}", prev.line+1, prev.column+1,
                                     ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};

@@ -30,5 +30,8 @@ set_target_properties(lab4 PROPERTIES
   CXX_STANDART_REQUIRED YES
   CXX_EXTENSIONS YES
 )
+target_include_directories(lab4 SYSTEM PRIVATE
+  "${FETCHCONTENT_BASE_DIR}/immer-src"
+)
 target_compile_options(lab4 PRIVATE ${BASE_COMPILE_FLAGS})
-target_link_libraries(lab4 PRIVATE liblexer)
+target_link_libraries(lab4 PRIVATE liblexer strong_type::strong_type)
