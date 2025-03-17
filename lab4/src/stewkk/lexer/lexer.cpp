@@ -48,7 +48,8 @@ bool IsIdentFirst(char32_t c) {
 
 TokenizerOutput HandleState(
     char32_t code_point, const Whitespace& state) {
-  const auto [token_prefix, token_start, prev, current] = state.value_of();
+  const auto [token_prefix, token_start, prev, current, ident_to_index, index_to_ident]
+      = state.value_of();
 
   Match(code_point) {
     Case(IsSpace) return {
@@ -76,7 +77,8 @@ TokenizerOutput HandleState(
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Str& state) {
-  const auto [token_prefix, token_start, prev, current] = state.value_of();
+  const auto [token_prefix, token_start, prev, current, ident_to_index, index_to_ident]
+      = state.value_of();
 
   Match(code_point) {
     Case('\\') return {Escape(state.value_of().MovePositionBy(code_point)), std::nullopt,
@@ -94,7 +96,8 @@ TokenizerOutput HandleState(char32_t code_point, const Str& state) {
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Escape& state) {
-  const auto [token_prefix, token_start, prev, current] = state.value_of();
+  const auto [token_prefix, token_start, prev, current, ident_to_index, index_to_ident]
+      = state.value_of();
 
   Match(code_point) {
     Case('n') return {Str(state.value_of().AddToPrefix('\n').MovePositionBy(code_point)),
@@ -118,7 +121,8 @@ bool IsIdentFirstNotUnderscore(char32_t c) {
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Number& state) {
-  const auto [token_prefix, token_start, prev, current] = state.value_of();
+  const auto [token_prefix, token_start, prev, current, ident_to_index, index_to_ident]
+      = state.value_of();
 
   Match(code_point) {
     Case(IsDigit) return {
@@ -144,21 +148,34 @@ bool IsIdent(char32_t c) {
   return Any(c, IsAlpha, IsDigit, std::bind(Contains, U"@_$", std::placeholders::_1));
 }
 
+std::size_t GetIdentIndex(immer::map<std::string, std::size_t> ident_to_index, std::string ident) {
+  const auto it = ident_to_index.find(ident);
+  return it == nullptr ? ident_to_index.size() : *it;
+}
+
 TokenizerOutput HandleState(
     char32_t code_point, const Ident& state) {
-  const auto [token_prefix, token_start, prev, current] = state.value_of();
+  const auto [token_prefix, token_start, prev, current, ident_to_index, index_to_ident]
+      = state.value_of();
 
   Match(code_point) {
     Case('"') return {Str(state.value_of()
                               .DiscardPrefix()
                               .AddToPrefix(code_point)
                               .SetTokenStart(current)
-                              .MovePositionBy(code_point)),
-                      IdentToken(Coords{token_start, prev}, 0 /*TODO*/), std::nullopt};
-    Case(IsSpace) return {
-        Whitespace(
-            state.value_of().DiscardPrefix().SetTokenStart(current).MovePositionBy(code_point)),
-        IdentToken(Coords{token_start, prev}, 0 /*TODO*/), std::nullopt};
+                              .MovePositionBy(code_point)
+                              .AddIdentIfNotExists(ToString(token_prefix))),
+                      IdentToken(Coords{token_start, prev},
+                                 GetIdentIndex(ident_to_index, ToString(token_prefix))),
+                      std::nullopt};
+    Case(IsSpace) return {Whitespace(state.value_of()
+                                         .DiscardPrefix()
+                                         .SetTokenStart(current)
+                                         .MovePositionBy(code_point)
+                                         .AddIdentIfNotExists(ToString(token_prefix))),
+                          IdentToken(Coords{token_start, prev},
+                                     GetIdentIndex(ident_to_index, ToString(token_prefix))),
+                          std::nullopt};
     Case(IsIdent) return {
         Ident(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)), std::nullopt,
         std::nullopt};
@@ -211,6 +228,8 @@ TokenizerStateData TokenizerStateData::DiscardPrefix() const {
       .token_start = token_start,
       .prev = prev,
       .current = current,
+      .ident_to_index = ident_to_index,
+      .index_to_ident = index_to_ident,
   };
 }
 
@@ -220,6 +239,8 @@ TokenizerStateData TokenizerStateData::AddToPrefix(char32_t c) const {
       .token_start = token_start,
       .prev = prev,
       .current = current,
+      .ident_to_index = ident_to_index,
+      .index_to_ident = index_to_ident,
   };
 }
 
@@ -229,6 +250,8 @@ TokenizerStateData TokenizerStateData::MovePositionBy(char32_t c) const {
       .token_start = token_start,
       .prev = current,
       .current = NextPosition(current, c),
+      .ident_to_index = ident_to_index,
+      .index_to_ident = index_to_ident,
   };
 }
 
@@ -238,6 +261,26 @@ TokenizerStateData TokenizerStateData::SetTokenStart(Position p) const {
       .token_start = p,
       .prev = prev,
       .current = current,
+      .ident_to_index = ident_to_index,
+      .index_to_ident = index_to_ident,
+  };
+}
+
+TokenizerStateData TokenizerStateData::AddIdentIfNotExists(std::string ident) const {
+  return ident_to_index.find(ident) == nullptr ? TokenizerStateData{
+      .token_prefix = token_prefix,
+      .token_start = token_start,
+      .prev = prev,
+      .current = current,
+      .ident_to_index = ident_to_index.set(ident, index_to_ident.size()),
+      .index_to_ident = index_to_ident.push_back(ident),
+  } : TokenizerStateData{
+      .token_prefix = token_prefix,
+      .token_start = token_start,
+      .prev = prev,
+      .current = current,
+      .ident_to_index = ident_to_index,
+      .index_to_ident = index_to_ident,
   };
 }
 

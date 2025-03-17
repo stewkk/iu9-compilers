@@ -46,6 +46,8 @@ TokenizerState GetStartState() {
       .token_start = Position{0, 0},
       .prev = Position{0, 0},
       .current = Position{0, 0},
+      .ident_to_index = immer::map<std::string, std::size_t>{},
+      .index_to_ident = immer::flex_vector<std::string>{},
   });
 }
 
@@ -117,14 +119,17 @@ TEST(LexerTest, TokenizeInteger) {
 }
 
 TEST(LexerTest, TokenizeIdentFull) {
-  ASSERT_THAT(Tokenize("  Y1@_123 "s, GetStartState()),
-              Eq(std::make_tuple(TokenizerState(Whitespace(TokenizerStateData{
-                                     .token_prefix = immer::flex_vector<char32_t>{},
-                                     .token_start = Position{0, 9},
-                                     .prev = Position{0, 9},
-                                     .current = Position{0, 10},
-                                 })),
-                                 Tokens{IdentToken(Coords{{0, 2}, {0, 8}}, 0u)}, Messages{})));
+  ASSERT_THAT(
+      Tokenize("  Y1@_123 "s, GetStartState()),
+      Eq(std::make_tuple(TokenizerState(Whitespace(TokenizerStateData{
+                             .token_prefix = immer::flex_vector<char32_t>{},
+                             .token_start = Position{0, 9},
+                             .prev = Position{0, 9},
+                             .current = Position{0, 10},
+                             .ident_to_index = immer::map<std::string, std::size_t>{{"Y1@_123", 0}},
+                             .index_to_ident = immer::flex_vector<std::string>{{"Y1@_123"}},
+                         })),
+                         Tokens{IdentToken(Coords{{0, 2}, {0, 8}}, 0u)}, Messages{})));
 }
 
 TEST(LexerTest, TokenizeError) {
