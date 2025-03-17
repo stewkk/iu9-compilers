@@ -17,9 +17,15 @@ using Message = std::string;
 struct TokenizerStateData {
   immer::flex_vector<char32_t> token_prefix;
   Position token_start;
-  Position token_end;
+  Position prev;
+  Position current;
 
   bool operator==(const TokenizerStateData& other) const = default;
+
+  TokenizerStateData DiscardPrefix() const;
+  TokenizerStateData AddToPrefix(char32_t c) const;
+  TokenizerStateData MovePositionBy(char32_t c) const;
+  TokenizerStateData SetTokenStart(Position p) const;
 };
 
 template <typename Tag> using StateType = strong::type<TokenizerStateData, Tag, strong::equality>;

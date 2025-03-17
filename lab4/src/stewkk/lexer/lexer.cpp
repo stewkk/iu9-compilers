@@ -37,14 +37,9 @@ requires(Predicate p, char32_t c) {
     { p(c) } -> std::same_as<bool>;
 };
 
-template <CharPredicate Predicate>
-bool Any(char32_t c, Predicate predicate) {
-  return predicate(c);
-}
-
-template <CharPredicate Predicate, CharPredicate... Predicates>
-bool Any(char32_t c, Predicate predicate, Predicates... predicates) {
-  return predicate(c) || Any(c, predicates...);
+template <CharPredicate... Predicates>
+bool Any(char32_t c, Predicates... predicates) {
+  return (... || predicates(c));
 }
 
 bool IsIdentFirst(char32_t c) {
@@ -53,113 +48,67 @@ bool IsIdentFirst(char32_t c) {
 
 TokenizerOutput HandleState(
     char32_t code_point, const Whitespace& state) {
-  const auto [token_prefix, token_start, token_end] = state.value_of();
+  const auto [token_prefix, token_start, prev, current] = state.value_of();
 
   Match(code_point) {
-    Case(IsSpace) return std::make_tuple(
-        Whitespace(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt, std::nullopt);
-    Case(IsDigit) return std::make_tuple(
-        Number(TokenizerStateData{
-            .token_prefix = token_prefix.push_back(code_point),
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt, std::nullopt);
-    Case('"') return std::make_tuple(
-        Str(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt, std::nullopt);
-    Case(IsIdentFirst) return std::make_tuple(
-        Ident(TokenizerStateData{
-            .token_prefix = token_prefix.push_back(code_point),
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt, std::nullopt);
-    Otherwise() return std::make_tuple(Whitespace(TokenizerStateData{
-                                           .token_prefix = token_prefix,
-                                           .token_start = token_end,
-                                           .token_end = NextPosition(token_end, code_point),
-                                       }),
-                                       std::nullopt,
-                                       std::format("Unknown symbol at ({}:{}): {}", token_end.line,
-                                                   token_end.column, ToString({code_point})));
+    Case(IsSpace) return {
+        Whitespace(
+            state.value_of().DiscardPrefix().MovePositionBy(code_point)),
+        std::nullopt, std::nullopt};
+    Case(IsDigit) return {Number(state.value_of()
+                                     .AddToPrefix(code_point)
+                                     .MovePositionBy(code_point)
+                                     .SetTokenStart(current)),
+                          std::nullopt, std::nullopt};
+    Case('"') return {
+        Str(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
+        std::nullopt, std::nullopt};
+    Case(IsIdentFirst) return {Ident(state.value_of()
+                                         .AddToPrefix(code_point)
+                                         .MovePositionBy(code_point)
+                                         .SetTokenStart(current)),
+                               std::nullopt, std::nullopt};
+    Otherwise() return {Whitespace(state.value_of().MovePositionBy(code_point)), std::nullopt,
+                        std::format("Unknown symbol at ({}:{}): {}", current.line, current.column,
+                                    ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Str& state) {
-  const auto [token_prefix, token_start, token_end] = state.value_of();
+  const auto [token_prefix, token_start, prev, current] = state.value_of();
 
   Match(code_point) {
-    Case('\\') return std::make_tuple(Escape(TokenizerStateData{
-                                          .token_prefix = token_prefix,
-                                          .token_start = token_start,
-                                          .token_end = NextPosition(token_end, code_point),
-                                      }),
-                                      std::nullopt, std::nullopt);
-    Case('"') return std::make_tuple(
-        Whitespace(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        StringLiteralToken(Coords{token_start, token_end}, ToString(token_prefix)),
-        std::nullopt);
-    Otherwise() return std::make_tuple(Str(TokenizerStateData{
-                                           .token_prefix = token_prefix.push_back(code_point),
-                                           .token_start = token_start,
-                                           .token_end = NextPosition(token_end, code_point),
-                                       }),
-                                       std::nullopt, std::nullopt);
+    Case('\\') return {Escape(state.value_of().MovePositionBy(code_point)), std::nullopt,
+                       std::nullopt};
+    Case('"') return {Whitespace(state.value_of()
+                                     .DiscardPrefix()
+                                     .SetTokenStart(NextPosition(current, code_point))
+                                     .MovePositionBy(code_point)),
+                      StringLiteralToken(Coords{token_start, current}, ToString(token_prefix)),
+                      std::nullopt};
+    Otherwise() return {Str(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
+                        std::nullopt, std::nullopt};
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Escape& state) {
-  const auto [token_prefix, token_start, token_end] = state.value_of();
+  const auto [token_prefix, token_start, prev, current] = state.value_of();
 
   Match(code_point) {
-    Case('n') return std::make_tuple(Str(TokenizerStateData{
-                                         .token_prefix = token_prefix.push_back('\n'),
-                                         .token_start = token_start, .token_end = NextPosition(token_end, code_point),
-                                     }),
-                                     std::nullopt, std::nullopt);
-    Case('"') return std::make_tuple(Str(TokenizerStateData{
-                                         .token_prefix = token_prefix.push_back('\"'),
-                                         .token_start = token_start,
-                                         .token_end = NextPosition(token_end, code_point),
-                                     }),
-                                     std::nullopt, std::nullopt);
-    Case('\\') return std::make_tuple(Str(TokenizerStateData{
-                                          .token_prefix = token_prefix.push_back('\\'),
-                                          .token_start = token_start,
-                                          .token_end = NextPosition(token_end, code_point),
-                                      }),
-                                      std::nullopt, std::nullopt);
-    Case('t') return std::make_tuple(Str(TokenizerStateData{
-                                         .token_prefix = token_prefix.push_back('\t'),
-                                         .token_start = token_start,
-                                         .token_end = NextPosition(token_end, code_point),
-                                     }),
-                                     std::nullopt, std::nullopt);
-    Otherwise() return std::make_tuple(
-        Str(TokenizerStateData{
-            .token_prefix = token_prefix.push_back(code_point),
-            .token_start = token_start,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt,
-        std::format("Unknown escape sequence at ({}:{}): \\{}", token_end.line, token_end.column,
-                    ToString({code_point})));
+    Case('n') return {Str(state.value_of().AddToPrefix('\n').MovePositionBy(code_point)),
+                      std::nullopt, std::nullopt};
+    Case('"') return {Str(state.value_of().AddToPrefix('\"').MovePositionBy(code_point)),
+                                     std::nullopt, std::nullopt};
+    Case('\\') return {Str(state.value_of().AddToPrefix('\\').MovePositionBy(code_point)),
+                                     std::nullopt, std::nullopt};
+    Case('t') return {Str(state.value_of().AddToPrefix('\t').MovePositionBy(code_point)),
+                                     std::nullopt, std::nullopt};
+    Otherwise() return {Str(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
+                        std::nullopt,
+                        std::format("Unknown escape sequence at ({}:{}): \\{}", current.line,
+                                    current.column, ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
@@ -169,51 +118,24 @@ bool IsIdentFirstNotUnderscore(char32_t c) {
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Number& state) {
-  const auto [token_prefix, token_start, token_end] = state.value_of();
+  const auto [token_prefix, token_start, prev, current] = state.value_of();
 
   Match(code_point) {
-    Case(IsDigit) return std::make_tuple(
-        Number(TokenizerStateData{
-            .token_prefix = token_prefix.push_back(code_point),
-            .token_start = token_start,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt, std::nullopt);
-    Case('_') return std::make_tuple(
-        Number(TokenizerStateData{
-            .token_prefix = token_prefix,
-            .token_start = token_start,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        std::nullopt, std::nullopt);
-    Case(IsSpace) return std::make_tuple(
-        Whitespace(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        IntegerToken(
-            Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
-            std::stoll(ToString(token_prefix))),
-        std::nullopt);
-    Case(IsIdentFirstNotUnderscore) return std::make_tuple(
-        Ident(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{code_point},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        IntegerToken(
-            Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
-            std::stoll(ToString(token_prefix))),
-        std::nullopt);
-    Otherwise() return std::make_tuple(Str(TokenizerStateData{
-                                           .token_prefix = token_prefix.push_back(code_point),
-                                           .token_start = token_start,
-                                           .token_end = NextPosition(token_end, code_point),
-                                       }),
-                                       std::nullopt,
-                                       std::format("Unknown symbol at ({}:{}): {}", token_end.line,
-                                                   token_end.column, ToString({code_point})));
+    Case(IsDigit) return {
+        Number(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
+        std::nullopt, std::nullopt};
+    Case('_') return {
+        Number(state.value_of().MovePositionBy(code_point)),
+        std::nullopt, std::nullopt};
+    Case(IsSpace) return {
+        Whitespace(state.value_of().DiscardPrefix().MovePositionBy(code_point).SetTokenStart(current)),
+        IntegerToken(Coords{token_start, prev}, std::stoll(ToString(token_prefix))), std::nullopt};
+    Case(IsIdentFirstNotUnderscore) return {
+        Ident(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)),
+        IntegerToken(Coords{token_start, prev}, std::stoll(ToString(token_prefix))), std::nullopt};
+    Otherwise() return {Number(state.value_of().MovePositionBy(code_point)), std::nullopt,
+                        std::format("Unknown symbol at ({}:{}): {}", current.line, current.column,
+                                    ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
@@ -224,49 +146,31 @@ bool IsIdent(char32_t c) {
 
 TokenizerOutput HandleState(
     char32_t code_point, const Ident& state) {
-  const auto [token_prefix, token_start, token_end] = state.value_of();
+  const auto [token_prefix, token_start, prev, current] = state.value_of();
 
   Match(code_point) {
-    Case('"') return std::make_tuple(
-        Str(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{code_point},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        IdentToken(
-            Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
-            0 /*TODO*/),
-        std::nullopt);
-    Case(IsSpace) return std::make_tuple(
-        Whitespace(TokenizerStateData{
-            .token_prefix = immer::flex_vector<char32_t>{},
-            .token_start = token_end,
-            .token_end = NextPosition(token_end, code_point),
-        }),
-        IdentToken(
-            Coords{token_start, Position{token_end.line, /*TODO refactor?*/ token_end.column - 1}},
-            0 /*TODO*/),
-        std::nullopt);
-    Case(IsIdent) return std::make_tuple(Ident(TokenizerStateData{
-                                                .token_prefix = token_prefix.push_back(code_point),
-                                                .token_start = token_start,
-                                                .token_end = NextPosition(token_end, code_point),
-                                            }),
-                                            std::nullopt, std::nullopt);
-    Otherwise() return std::make_tuple(Ident(TokenizerStateData{
-                                           .token_prefix = token_prefix,
-                                           .token_start = token_start,
-                                           .token_end = NextPosition(token_end, code_point),
-                                       }),
-                                       std::nullopt,
-                                       std::format("Unknown symbol at ({}:{}): {}", token_end.line,
-                                                   token_end.column, ToString({code_point})));
+    Case('"') return {Str(state.value_of()
+                              .DiscardPrefix()
+                              .AddToPrefix(code_point)
+                              .SetTokenStart(current)
+                              .MovePositionBy(code_point)),
+                      IdentToken(Coords{token_start, prev}, 0 /*TODO*/), std::nullopt};
+    Case(IsSpace) return {
+        Whitespace(
+            state.value_of().DiscardPrefix().SetTokenStart(current).MovePositionBy(code_point)),
+        IdentToken(Coords{token_start, prev}, 0 /*TODO*/), std::nullopt};
+    Case(IsIdent) return {
+        Ident(state.value_of().AddToPrefix(code_point).MovePositionBy(code_point)), std::nullopt,
+        std::nullopt};
+    Otherwise() return {Ident(state.value_of().MovePositionBy(code_point)), std::nullopt,
+                        std::format("Unknown symbol at ({}:{}): {}", prev.line, prev.column,
+                                    ToString({code_point}))};
   }
   EndMatch throw std::logic_error{"unreachable"};
 }
 
 TokenizerOutput HandleState(char32_t code_point, const Eof& state) {
-  throw std::logic_error{"unimplemented"};
+  throw std::logic_error{"TODO: unimplemented"};
 }
 
 }  // namespace
@@ -299,6 +203,42 @@ std::string GetName(TokenizerState state) {
     Case(mch::C<Ident>()) return "IDENT";
     Case(mch::C<Eof>()) return "EOF";
   } EndMatch throw std::logic_error{"unreachable"};
+}
+
+TokenizerStateData TokenizerStateData::DiscardPrefix() const {
+  return TokenizerStateData{
+      .token_prefix = {},
+      .token_start = token_start,
+      .prev = prev,
+      .current = current,
+  };
+}
+
+TokenizerStateData TokenizerStateData::AddToPrefix(char32_t c) const {
+  return TokenizerStateData{
+      .token_prefix = token_prefix.push_back(c),
+      .token_start = token_start,
+      .prev = prev,
+      .current = current,
+  };
+}
+
+TokenizerStateData TokenizerStateData::MovePositionBy(char32_t c) const {
+  return TokenizerStateData{
+      .token_prefix = token_prefix,
+      .token_start = token_start,
+      .prev = current,
+      .current = NextPosition(current, c),
+  };
+}
+
+TokenizerStateData TokenizerStateData::SetTokenStart(Position p) const {
+  return TokenizerStateData{
+      .token_prefix = token_prefix,
+      .token_start = p,
+      .prev = prev,
+      .current = current,
+  };
 }
 
 }  // namespace stewkk::lexer
