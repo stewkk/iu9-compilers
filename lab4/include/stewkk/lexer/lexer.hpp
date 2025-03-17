@@ -41,7 +41,12 @@ using Eof = StateType<struct eof_>;
 
 using TokenizerState = std::variant<Whitespace, Str, Escape, Number, Ident, Eof>;
 
-std::string GetName(TokenizerState state);
+std::string GetName(const Whitespace&);
+std::string GetName(const Str&);
+std::string GetName(const Escape&);
+std::string GetName(const Number&);
+std::string GetName(const Ident&);
+std::string GetName(const Eof&);
 
 using Message = std::string;
 

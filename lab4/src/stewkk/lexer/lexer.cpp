@@ -242,15 +242,28 @@ TokenizerStringOutput Tokenize(std::string s, TokenizerState state) {
                      }();
 }
 
-std::string GetName(TokenizerState state) {
-  Match(state) {
-    Case(mch::C<Whitespace>()) return "WS";
-    Case(mch::C<Str>()) return "STR";
-    Case(mch::C<Escape>()) return "ESCAPE";
-    Case(mch::C<Number>()) return "INTEGER";
-    Case(mch::C<Ident>()) return "IDENT";
-    Case(mch::C<Eof>()) return "EOF";
-  } EndMatch throw std::logic_error{"unreachable"};
+std::string GetName(const Whitespace&) {
+  return "WS";
+}
+
+std::string GetName(const Str&) {
+  return "STR";
+}
+
+std::string GetName(const Escape&) {
+  return "ESCAPE";
+}
+
+std::string GetName(const Number&) {
+  return "INTEGER";
+}
+
+std::string GetName(const Ident&) {
+  return "IDENT";
+}
+
+std::string GetName(const Eof&) {
+  return "EOF";
 }
 
 TokenizerStateData TokenizerStateData::DiscardPrefix() const {

@@ -16,10 +16,10 @@ namespace stewkk::lexer {
 
 TokenizerStringOutput PrintState(const TokenizerStringOutput out) {
   const auto [state_variant, tokens, messages] = out;
-  std::cout << GetName(state_variant) << std::endl;
   std::visit(
       [](const auto& state) {
         const auto& state_value = state.value_of();
+        std::cout << GetName(state) << std::endl;
         std::cout << std::format("    prefix: '{}'\n", ToString(state_value.token_prefix));
         std::cout << std::format("    token start: {} {}\n", state_value.token_start.line,
                                  state_value.token_start.column);
@@ -138,7 +138,7 @@ TEST(LexerTest, TokenizeError) {
                                  })),
                                  Tokens{},
                                  Messages{
-                                     "Unknown symbol at (0:2): *",
+                                     "Unknown symbol at (1:3): *",
                                  })));
 }
 
