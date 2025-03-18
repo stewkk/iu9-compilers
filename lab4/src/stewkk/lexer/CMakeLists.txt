@@ -32,6 +32,7 @@ set_target_properties(lab4 PROPERTIES
 )
 target_include_directories(lab4 SYSTEM PRIVATE
   "${FETCHCONTENT_BASE_DIR}/immer-src"
+  "${FETCHCONTENT_BASE_DIR}/utfcpp-src/source"
 )
 target_compile_options(lab4 PRIVATE ${BASE_COMPILE_FLAGS})
 target_link_libraries(lab4 PRIVATE liblexer strong_type::strong_type)
