@@ -174,7 +174,6 @@ TokenizerOutput HandleState(
   Match(code_point) {
     Case('"') return {Str(state.value_of()
                               .DiscardPrefix()
-                              .AddToPrefix(code_point)
                               .SetTokenStart(current)
                               .MovePositionBy(code_point)
                               .AddIdentIfNotExists(ToString(token_prefix))),
@@ -226,6 +225,24 @@ TokenizerOutput Tokenize(
     char32_t code_point, TokenizerState state) {
   return std::visit([&code_point](const auto& state) { return HandleState(code_point, state); },
                     state);
+}
+
+std::tuple<TokenizerState, immer::flex_vector<Token>, std::optional<Message>> TokenizeWithEof(
+  char32_t code_point, TokenizerState state) {
+  Position pos = std::visit([](const auto& state_v) {
+    return state_v.value_of().current;
+  }, state);
+  const auto [new_state, token, message] = Tokenize(code_point, state);
+  if (code_point == kEofMarker && token.has_value()) {
+    return {new_state, immer::flex_vector<Token>{token.value(), EofToken(Coords{pos, pos}, ' ')}, message};
+  }
+  if (code_point == kEofMarker) {
+    return {new_state, immer::flex_vector<Token>{EofToken(Coords{pos, pos}, ' ')}, message};
+  }
+  if (token.has_value()) {
+    return {new_state, immer::flex_vector<Token>{token.value()}, message};
+  }
+  return {new_state, {}, message};
 }
 
 TokenizerStringOutput Tokenize(std::string s, TokenizerState state) {

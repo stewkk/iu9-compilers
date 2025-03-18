@@ -8,17 +8,17 @@
 
 int main() {
   stewkk::lexer::TokenizerState state{stewkk::lexer::Whitespace{stewkk::lexer::TokenizerStateData{}}};
-  std::optional<stewkk::lexer::Token> token;
+  immer::flex_vector<stewkk::lexer::Token> tokens;
   std::optional<stewkk::lexer::Message> message;
   auto b = std::istreambuf_iterator<char>(std::cin);
   auto e = std::istreambuf_iterator<char>();
 
   while (true) {
     const char32_t next = utf8::next(b, e);
-    std::tie(state, token, message) = stewkk::lexer::Tokenize(next, state);
+    std::tie(state, tokens, message) = stewkk::lexer::TokenizeWithEof(next, state);
 
-    if (token.has_value()) {
-      std::cout << ToString(token.value()) << std::endl;
+    for (auto token : tokens) {
+      std::cout << ToString(token) << std::endl;
     }
     if (message.has_value()) {
       std::cout << message.value() << std::endl;
@@ -28,9 +28,10 @@ int main() {
     }
   }
 
-  std::tie(state, token, message) = stewkk::lexer::Tokenize(stewkk::lexer::kEofMarker, state);
-  if (token.has_value()) {
-    std::cout << ToString(token.value()) << std::endl;
+  std::tie(state, tokens, message)
+      = stewkk::lexer::TokenizeWithEof(stewkk::lexer::kEofMarker, state);
+  for (auto token : tokens) {
+    std::cout << ToString(token) << std::endl;
   }
   if (message.has_value()) {
     std::cout << message.value() << std::endl;

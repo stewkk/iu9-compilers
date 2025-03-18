@@ -17,6 +17,10 @@ std::string GetName(const IdentToken&) {
     return "IDENT";
 }
 
+std::string GetName(const EofToken&) {
+    return "EOF";
+}
+
 std::string ToString(Token token_variant) {
   return std::visit(
       [](const auto& token) {

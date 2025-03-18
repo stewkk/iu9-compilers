@@ -59,6 +59,9 @@ using TokenizerStringOutput = std::tuple<TokenizerState, Tokens, Messages>;
 TokenizerOutput Tokenize(
     char32_t code_point, TokenizerState state);
 
+std::tuple<TokenizerState, immer::flex_vector<Token>, std::optional<Message>> TokenizeWithEof(
+    char32_t code_point, TokenizerState state);
+
 TokenizerStringOutput Tokenize(std::string input, TokenizerState state);
 
 std::string ToString(immer::flex_vector<char32_t> s);
