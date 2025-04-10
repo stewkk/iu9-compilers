@@ -1,0 +1,38 @@
+#+title: lab5
+
+*** SPACE
+#+begin_example
+\s+
+#+end_example
+*** IDENT
+#+begin_example
+[a-zA-Z][a-zA-Z0-9]*
+#+end_example
+*** INTEGER
+#+begin_example
+[0-9]+
+#+end_example
+*** DEF
+#+begin_example
+def
+#+end_example
+*** RETURN
+#+begin_example
+return
+#+end_example
+*** LPAREN
+#+begin_example
+\(
+#+end_example
+*** RPAREN
+#+begin_example
+\)
+#+end_example
+*** COLON
+#+begin_example
+:
+#+end_example
+*** COMMENTARY
+#+begin_example
+\"\"\"(?:.|\n)*\"\"\"
+#+end_example

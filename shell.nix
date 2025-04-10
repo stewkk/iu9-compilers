@@ -16,6 +16,9 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
     pkgs.go_1_21
     pkgs.cmake
     pkgs.icu.dev
+    pkgs.clojure
+    pkgs.clojure-lsp
+    pkgs.leiningen
   ];
 
   nativeBuildInputs = [
