@@ -56,6 +56,7 @@
                          (first edge)
                          (first (rest edge)))))))))
 
+;; TODO: привязать просто переходы к состояниям автомата
 ;; [state][character class]
 (def transitions '[(generate-transitions (0 1)
                                          (1 2)
