@@ -48,3 +48,11 @@
                            (->Token :RPAREN ")" (coords '(1 26) '(1 26)))
                            (->Token :EOF "" (coords '(1 27) '(1 27))))
                      '())))))
+
+(deftest tokenize-lines-test
+  (let [got (tokenize "123\n  321  \n   oa  ")]
+    (is (= got (list (list (->Token :INT "123" (coords '(1 1) '(1 3)))
+                           (->Token :INT "321" (coords '(2 3) '(2 5)))
+                           (->Token :IDENT "oa" (coords '(3 4) '(3 5)))
+                           (->Token :EOF "" (coords '(3 8) '(3 8))))
+                     '())))))

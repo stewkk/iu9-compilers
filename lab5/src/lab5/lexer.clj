@@ -146,7 +146,7 @@
 (defn next-position [pos character]
   (if (= \newline character)
     (->Position (+ 1 (get pos :line))
-                (get pos :column))
+                1)
     (->Position (get pos :line)
                 (+ 1 (get pos :column)))))
 
