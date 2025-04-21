@@ -134,6 +134,9 @@
   (prn x)
   x)
 
+(defn get-token [state]
+  (->Token (state-to-lexem-class state)))
+
 (defn tokenize
   [text]
   (loop [state 0
@@ -144,7 +147,7 @@
     (if (empty? symbols)
       (if (nil? final)
         (list (reverse tokens) (reverse messages))
-        (list (reverse (cons final tokens))
+        (list (reverse (cons (get-token final) tokens))
               (reverse messages)))
       (let [new-state (make-transition state (first symbols))]
         (condp = (list new-state final)
@@ -156,7 +159,7 @@
           (list nil final) (recur 0
                                   nil
                                   symbols
-                                  (cons final tokens)
+                                  (cons (get-token final) tokens)
                                   messages)
           (list new-state final) (recur new-state
                                         (if (is-final? new-state)

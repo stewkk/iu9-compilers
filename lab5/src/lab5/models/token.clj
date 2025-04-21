@@ -1,6 +1,6 @@
 (ns lab5.models.token)
 
-(defrecord Token [image])
+(defrecord Token [class])
 
 (defrecord Coordinates [start end])
 

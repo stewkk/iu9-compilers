@@ -11,7 +11,8 @@
 
 (deftest tokenize-test
   (let [got (tokenize "123")]
-    (is (= got '((3) ())))))
+    (is (= got (list (list (->Token :INT))
+                     '())))))
 
 (deftest get-character-class-test
   (let [got (get-character-classes \a)]
@@ -19,5 +20,16 @@
 
 (deftest tokenize-simple-text-test
   (let [got (tokenize "123 a1 def return1: (oaoa)")]
-    (is (= got '((3 1 2 1 6 1 2 15 1 13 2 14)
-                 ())))))
+    (is (= got (list (list (->Token :INT)
+                           (->Token :WS)
+                           (->Token :IDENT)
+                           (->Token :WS)
+                           (->Token :DEF)
+                           (->Token :WS)
+                           (->Token :IDENT)
+                           (->Token :COLON)
+                           (->Token :WS)
+                           (->Token :LPAREN)
+                           (->Token :IDENT)
+                           (->Token :RPAREN))
+                     '())))))
