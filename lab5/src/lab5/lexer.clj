@@ -12,86 +12,105 @@
   #(and (not= character %)
         (Character/isLetterOrDigit %)))
 
-(def character-classes [#(str/includes? "\t\n " (str %))
-                        #(and (Character/isLetter %)
-                              (not (str/includes? "rd" (str %))))
-                        #(Character/isLetterOrDigit %)
-                        #(Character/isDigit %)
-                        #(= \d %)
-                        #(= \e %)
-                        (alnum-exclude-character \e)
-                        #(= \f %)
-                        (alnum-exclude-character \f)
-                        #(= \t %)
-                        (alnum-exclude-character \t)
-                        #(= \u %)
-                        (alnum-exclude-character \u)
-                        #(= \r %)
-                        (alnum-exclude-character \r)
-                        #(= \n %)
-                        (alnum-exclude-character \n)
-                        #(= \( %)
-                        #(= \) %)
-                        #(= \: %)
-                        #(= \" %)
-                        #(not= \" %)])
+(def character-classes [(list #(str/includes? "\t\n " (str %))
+                    '(0 1)
+                    '(1 1))
+                  (list #(and (Character/isLetter %)
+                          (not (str/includes? "rd" (str %))))
+                    '(0 2))
+                  (list #(Character/isLetterOrDigit %)
+                    '(2 2)
+                    '(12 2)
+                    '(6 2))
+                  (list #(Character/isDigit %)
+                    '(0 3)
+                    '(3 3))
+                  (list #(= \d %)
+                    '(0 4))
+                  (list #(= \e %)
+                    '(4 5))
+                  (list (alnum-exclude-character \e)
+                    '(4 2)
+                    '(7 2))
+                  (list #(= \f %)
+                    '(5 6))
+                  (list (alnum-exclude-character \f)
+                    '(5 2))
+                  (list #(= \t %)
+                    '(8 9))
+                  (list (alnum-exclude-character \t)
+                    '(8 2))
+                  (list #(= \u %)
+                    '(9 10))
+                  (list (alnum-exclude-character \u)
+                    '(9 2))
+                  (list #(= \r %)
+                    '(10 11))
+                  (list (alnum-exclude-character \r)
+                    '(10 2))
+                  (list #(= \n %)
+                    '(11 12))
+                  (list (alnum-exclude-character \n)
+                    '(11 2))
+                  (list #(= \( %)
+                    '(0 13))
+                  (list #(= \) %)
+                    '(0 14))
+                  (list #(= \: %)
+                    '(0 15))
+                  (list #(= \" %)
+                    '(0 16)
+                    '(16 17)
+                    '(17 18)
+                    '(18 20)
+                    '(19 20)
+                    '(20 21)
+                    '(21 22))
+                  (list #(not= \" %)
+                    '(18 19)
+                    '(19 19)
+                    '(20 19)
+                    '(21 19))])
+
+
+(defn spymy
+  "Print + Return"
+  [x]
+  (prn x)
+  x)
 
 (defn get-character-classes [character]
-  (->> (map-indexed (fn [index pred]
-                      (if (pred character)
+  (->> (map-indexed (fn [index class]
+                      (if ((first class) character)
                         index
                         -1))
                     character-classes)
        (filter #(not= % -1))))
 
-(defn generate-transitions [& edges]
-  (let [res (into [] (repeat 22 -1))]
-    (loop [edges edges
-           res res]
-      (if (empty? edges)
-        res
-        (let [edge (first edges)]
-          (recur (rest edges)
-                  (assoc res
-                         (first edge)
-                         (first (rest edge)))))))))
-
-;; TODO: привязать просто переходы к состояниям автомата
-;; [state][character class]
-(def transitions '[(generate-transitions (0 1)
-                                         (1 2)
-                                         (3 3)
-                                         (4 4)
-                                         (13 7)
-                                         (17 13)
-                                         (18 14)
-                                         (19 15)
-                                         (20 16))
-                   (generate-transitions (0 1))
-                   (generate-transitions (2 2))
-                   (generate-transitions (3 3))
-                   (generate-transitions (5 5) (6 2))
-                   (generate-transitions (7 6) (8 2))
-                   (generate-transitions (2 2))
-                   (generate-transitions (5 8) (6 2))
-                   (generate-transitions (9 9) (10 2))
-                   (generate-transitions (11 10) (12 2))
-                   (generate-transitions (13 11) (14 2))
-                   (generate-transitions (15 12) (16 2))
-                   (generate-transitions (2 2))
-                   (generate-transitions (20 17))
-                   (generate-transitions (20 18))
-                   (generate-transitions (20 20) (21 19))
-                   (generate-transitions (21 19) (20 20))
-                   (generate-transitions (21 19) (20 21))
-                   (generate-transitions (21 19) (20 22))
-                   ])
+(def transitions (loop [transitions (into [] (repeat 22 (into [] (repeat (count character-classes) -1))))
+                        classes (seq character-classes)
+                        i 0]
+                   (if (empty? classes)
+                     transitions
+                     (recur (loop [transitions transitions
+                                   edges (rest (first classes))]
+                              (if (empty? edges)
+                                transitions
+                                (recur (assoc-in transitions
+                                                 [(first (first edges)) i]
+                                                 (first (rest (first edges))))
+                                       (rest edges))))
+                            (rest classes)
+                            (+ i 1)))))
 
 (defn make-transition [state character]
-  (let [state-transitions (get transitions state)]
-    (->> (get-character-classes character)
-         (map (fn [index] (get state-transitions index)))
-         first)))
+  (let [state-transitions (get transitions state)
+        transition-list (->> (get-character-classes character)
+                             (map (fn [index] (get state-transitions index)))
+                             (filter #(not= % -1)))]
+    (if (empty? transition-list)
+      nil
+      (first transition-list))))
 
 (defn tokenize
   [text]
@@ -101,7 +120,10 @@
          messages '()]
     (if (empty? symbols)
       (list tokens messages)
-      (recur (make-transition state (first symbols))
-             (rest symbols)
-             tokens
-             messages))))
+      (let [new-state (make-transition state (first symbols))]
+        (if (nil? new-state)
+          nil ; TODO: return last final state
+          (recur new-state
+           (rest symbols)
+           tokens
+           messages))))))

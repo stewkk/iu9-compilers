@@ -17,6 +17,3 @@
   (let [got (get-character-classes \a)]
     (is (= got (list 1 2 6 8 10 12 14 16 21)))))
 
-(deftest genetare-transitions-test
-  (let [got (generate-transitions '(1 2) '(3 4))]
-    (is (= got [-1 2 -1 4 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1]))))
