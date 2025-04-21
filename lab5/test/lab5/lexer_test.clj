@@ -11,7 +11,7 @@
 
 (deftest tokenize-test
   (let [got (tokenize "123")]
-    (is (= got '(() ())))))
+    (is (= got '((3) ())))))
 
 (deftest get-character-class-test
   (let [got (get-character-classes \a)]

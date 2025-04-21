@@ -72,6 +72,23 @@
                     '(20 19)
                     '(21 19))])
 
+(def state-to-lexem-class {1 :WS
+                           2 :IDENT
+                           3 :INT
+                           4 :IDENT
+                           5 :IDENT
+                           6 :DEF
+                           7 :IDENT
+                           8 :IDENT
+                           9 :IDENT
+                           10 :IDENT
+                           11 :IDENT
+                           12 :RETURN
+                           13 :LPAREN
+                           14 :RPAREN
+                           15 :COLON
+                           22 :COMMENT
+                           })
 
 (defn get-character-classes [character]
   (->> (map-indexed (fn [index class]
@@ -107,7 +124,7 @@
       (first transition-list))))
 
 (defn is-final? [state]
-  false)
+  (not (nil? (get state-to-lexem-class state))))
 
 (defn tokenize
   [text]
@@ -122,22 +139,21 @@
         (list (cons final tokens)
               messages))
       (let [new-state (make-transition state (first symbols))]
-        (if (nil? new-state)
-          (if (nil? final)
-            (recur state
-                   final
-                   (rest symbols)
-                   tokens
-                   (cons "error at x" messages))
-            (recur 0
-                   nil
-                   (rest symbols)
-                   (cons final tokens)
-                   messages))
-          (recur new-state
-           (if (is-final? new-state)
-             new-state
-             final)
-           (rest symbols)
-           tokens
-           messages))))))
+        (condp = '(new-state final)
+          '(nil nil) (recur state
+                            final
+                            (rest symbols)
+                            tokens
+                            (cons "error at x" messages))
+          '(nil final) (recur 0
+                              nil
+                              (rest symbols)
+                              (cons final tokens)
+                              messages)
+          '(new-state final) (recur new-state
+                                    (if (is-final? new-state)
+                                      new-state
+                                      final)
+                                    (rest symbols)
+                                    tokens
+                                    messages))))))
