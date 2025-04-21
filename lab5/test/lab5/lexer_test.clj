@@ -17,3 +17,7 @@
   (let [got (get-character-classes \a)]
     (is (= got (list 1 2 6 8 10 12 14 16 21)))))
 
+(deftest tokenize-simple-text-test
+  (let [got (tokenize "123 a1 def return1: (oaoa)")]
+    (is (= got '((3 1 2 1 6 1 2 15 1 13 2 14)
+                 ())))))

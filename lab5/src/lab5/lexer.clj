@@ -28,6 +28,7 @@
                         (list #(= \d %)
                               '(0 4))
                         (list #(= \e %)
+                              '(7 8)
                               '(4 5))
                         (list (alnum-exclude-character \e)
                               '(4 2)
@@ -45,6 +46,7 @@
                         (list (alnum-exclude-character \u)
                               '(9 2))
                         (list #(= \r %)
+                              '(0 7)
                               '(10 11))
                         (list (alnum-exclude-character \r)
                               '(10 2))
@@ -126,6 +128,12 @@
 (defn is-final? [state]
   (not (nil? (get state-to-lexem-class state))))
 
+(defn spymy
+  "Print + Return"
+  [x]
+  (prn x)
+  x)
+
 (defn tokenize
   [text]
   (loop [state 0
@@ -135,25 +143,25 @@
          messages '()]
     (if (empty? symbols)
       (if (nil? final)
-        (list tokens messages)
-        (list (cons final tokens)
-              messages))
+        (list (reverse tokens) (reverse messages))
+        (list (reverse (cons final tokens))
+              (reverse messages)))
       (let [new-state (make-transition state (first symbols))]
-        (condp = '(new-state final)
-          '(nil nil) (recur state
-                            final
-                            (rest symbols)
-                            tokens
-                            (cons "error at x" messages))
-          '(nil final) (recur 0
-                              nil
-                              symbols
-                              (cons final tokens)
-                              messages)
-          '(new-state final) (recur new-state
-                                    (if (is-final? new-state)
-                                      new-state
-                                      final)
-                                    (rest symbols)
-                                    tokens
-                                    messages))))))
+        (condp = (list new-state final)
+          (list nil nil) (recur state
+                                final
+                                (rest symbols)
+                                tokens
+                                (cons (format "error at %c" (first symbols)) messages))
+          (list nil final) (recur 0
+                                  nil
+                                  symbols
+                                  (cons final tokens)
+                                  messages)
+          (list new-state final) (recur new-state
+                                        (if (is-final? new-state)
+                                          new-state
+                                          final)
+                                        (rest symbols)
+                                        tokens
+                                        messages))))))
