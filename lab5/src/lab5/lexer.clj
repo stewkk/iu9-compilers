@@ -137,7 +137,7 @@
 (defn get-token [state image]
   (->Token (state-to-lexem-class state) (str/join (reverse image))))
 
-(defn tokenize
+(defn tokenize-internal
   [text]
   (loop [state 0
          final nil
@@ -147,9 +147,9 @@
          messages '()]
     (if (empty? characters)
       (if (nil? final)
-        (list (reverse tokens) (reverse messages))
-        (list (reverse (cons (get-token final image) tokens))
-              (reverse messages)))
+        (list tokens messages)
+        (list (cons (get-token final image) tokens)
+              messages))
       (let [character (first characters)
             new-state (make-transition state character)]
         (condp = (list new-state final)
@@ -173,3 +173,13 @@
                                         (rest characters)
                                         tokens
                                         messages))))))
+
+(defn tokenize [text]
+  (let [tmp (tokenize-internal text)
+        tokens (first tmp)
+        messages (first (rest tmp))]
+    (list (reverse
+           (cons (->Token :EOF "")
+                 (filter #(not= (get % :class) :WS)
+                         tokens)))
+          messages)))
