@@ -134,37 +134,42 @@
   (prn x)
   x)
 
-(defn get-token [state]
-  (->Token (state-to-lexem-class state)))
+(defn get-token [state image]
+  (->Token (state-to-lexem-class state) (str/join (reverse image))))
 
 (defn tokenize
   [text]
   (loop [state 0
          final nil
-         symbols (seq text)
+         image '()
+         characters (seq text)
          tokens '()
          messages '()]
-    (if (empty? symbols)
+    (if (empty? characters)
       (if (nil? final)
         (list (reverse tokens) (reverse messages))
-        (list (reverse (cons (get-token final) tokens))
+        (list (reverse (cons (get-token final image) tokens))
               (reverse messages)))
-      (let [new-state (make-transition state (first symbols))]
+      (let [character (first characters)
+            new-state (make-transition state character)]
         (condp = (list new-state final)
           (list nil nil) (recur state
                                 final
-                                (rest symbols)
+                                image
+                                (rest characters)
                                 tokens
-                                (cons (format "error at %c" (first symbols)) messages))
+                                (cons (format "error at %c" character) messages))
           (list nil final) (recur 0
                                   nil
-                                  symbols
-                                  (cons (get-token final) tokens)
+                                  '()
+                                  characters
+                                  (cons (get-token final image) tokens)
                                   messages)
           (list new-state final) (recur new-state
                                         (if (is-final? new-state)
                                           new-state
                                           final)
-                                        (rest symbols)
+                                        (cons character image)
+                                        (rest characters)
                                         tokens
                                         messages))))))
