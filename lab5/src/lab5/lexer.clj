@@ -73,19 +73,13 @@
                     '(21 19))])
 
 
-(defn spymy
-  "Print + Return"
-  [x]
-  (prn x)
-  x)
-
 (defn get-character-classes [character]
   (->> (map-indexed (fn [index class]
                       (if ((first class) character)
                         index
-                        -1))
+                        nil))
                     character-classes)
-       (filter #(not= % -1))))
+       (filter #(not (nil? %)))))
 
 (def transitions (loop [transitions (into [] (repeat 22 (into [] (repeat (count character-classes) -1))))
                         classes (seq character-classes)
