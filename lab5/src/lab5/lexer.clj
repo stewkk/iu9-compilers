@@ -134,8 +134,21 @@
   (prn x)
   x)
 
-(defn get-token [state image]
-  (->Token (state-to-lexem-class state) (str/join (reverse image))))
+(defn coords [start end]
+  (->Coordinates (->Position (first start) (first (rest start)))
+                 (->Position (first end) (first (rest end)))))
+
+(defn get-token [state image start end]
+  (->Token (state-to-lexem-class state)
+           (str/join (reverse image))
+           (->Coordinates start end)))
+
+(defn next-position [pos character]
+  (if (= \newline character)
+    (->Position (+ 1 (get pos :line))
+                (get pos :column))
+    (->Position (get pos :line)
+                (+ 1 (get pos :column)))))
 
 (defn tokenize-internal
   [text]
@@ -143,13 +156,17 @@
          final nil
          image '()
          characters (seq text)
+         start (->Position 1 1)
+         end nil
+         current (->Position 1 1)
          tokens '()
          messages '()]
     (if (empty? characters)
       (if (nil? final)
-        (list tokens messages)
-        (list (cons (get-token final image) tokens)
-              messages))
+        (list tokens messages current)
+        (list (cons (get-token final image start end) tokens)
+              messages
+              current))
       (let [character (first characters)
             new-state (make-transition state character)]
         (condp = (list new-state final)
@@ -157,29 +174,47 @@
                                 final
                                 image
                                 (rest characters)
+                                start
+                                end
+                                (next-position current character)
                                 tokens
                                 (cons (format "error at %c" character) messages))
           (list nil final) (recur 0
                                   nil
                                   '()
                                   characters
-                                  (cons (get-token final image) tokens)
+                                  current
+                                  end
+                                  current
+                                  (cons (get-token final image start end) tokens)
                                   messages)
-          (list new-state final) (recur new-state
-                                        (if (is-final? new-state)
+          (list new-state final) (if (is-final? new-state)
+                                   (recur new-state
                                           new-state
-                                          final)
-                                        (cons character image)
-                                        (rest characters)
-                                        tokens
-                                        messages))))))
+                                          (cons character image)
+                                          (rest characters)
+                                          start
+                                          current
+                                          (next-position current character)
+                                          tokens
+                                          messages)
+                                   (recur new-state
+                                          final
+                                          (cons character image)
+                                          (rest characters)
+                                          start
+                                          end
+                                          (next-position current character)
+                                          tokens
+                                          messages)))))))
 
 (defn tokenize [text]
   (let [tmp (tokenize-internal text)
         tokens (first tmp)
-        messages (first (rest tmp))]
+        messages (first (rest tmp))
+        end (first (rest (rest tmp)))]
     (list (reverse
-           (cons (->Token :EOF "")
+           (cons (->Token :EOF "" (->Coordinates end end))
                  (filter #(not= (get % :class) :WS)
                          tokens)))
           messages)))
