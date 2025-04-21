@@ -106,18 +106,38 @@
       nil
       (first transition-list))))
 
+(defn is-final? [state]
+  false)
+
 (defn tokenize
   [text]
   (loop [state 0
+         final nil
          symbols (seq text)
          tokens '()
          messages '()]
     (if (empty? symbols)
-      (list tokens messages)
+      (if (nil? final)
+        (list tokens messages)
+        (list (cons final tokens)
+              messages))
       (let [new-state (make-transition state (first symbols))]
         (if (nil? new-state)
-          nil ; TODO: return last final state
+          (if (nil? final)
+            (recur state
+                   final
+                   (rest symbols)
+                   tokens
+                   (cons "error at x" messages))
+            (recur 0
+                   nil
+                   (rest symbols)
+                   (cons final tokens)
+                   messages))
           (recur new-state
+           (if (is-final? new-state)
+             new-state
+             final)
            (rest symbols)
            tokens
            messages))))))
