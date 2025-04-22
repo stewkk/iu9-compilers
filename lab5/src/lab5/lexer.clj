@@ -3,11 +3,6 @@
   (:require [clojure.string :as str]
             [lab5.models.token :refer :all]))
 
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& _]
-  (println "Hello, World!"))
-
 (defn alnum-exclude-character [character]
   #(and (not= character %)
         (Character/isLetterOrDigit %)))
@@ -155,6 +150,17 @@
           (get pos :line)
           (get pos :column)))
 
+(defn format-coords [coords]
+  (format "(%s-%s)"
+          (format-position (get coords :start))
+          (format-position (get coords :end))))
+
+(defn format-token [token]
+  (format "%s %s: %s"
+          (get token :class)
+          (format-coords (get token :coords))
+          (get token :image)))
+
 (defn tokenize-internal
   [text]
   (loop [state 0
@@ -223,3 +229,13 @@
                  (filter #(not= (get % :class) :WS)
                          tokens)))
           messages)))
+
+(defn -main
+  [& _]
+  (let [input (slurp *in*)
+        out (tokenize input)
+        tokens (first out)
+        messages (first (rest out))]
+    (println (str/join "\n" messages))
+    (println (->> (map #(format-token %) tokens)
+                  (str/join "\n")))))
