@@ -150,6 +150,11 @@
     (->Position (get pos :line)
                 (+ 1 (get pos :column)))))
 
+(defn format-position [pos]
+  (format "%d:%d"
+          (get pos :line)
+          (get pos :column)))
+
 (defn tokenize-internal
   [text]
   (loop [state 0
@@ -174,11 +179,11 @@
                                 final
                                 image
                                 (rest characters)
-                                start
-                                end
+                                (next-position current character)
+                                nil
                                 (next-position current character)
                                 tokens
-                                (cons (format "error at %c" character) messages))
+                                (cons (format "unexpected symbol %c at %s" character (format-position current)) messages))
           (list nil final) (recur 0
                                   nil
                                   '()

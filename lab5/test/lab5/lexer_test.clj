@@ -56,3 +56,31 @@
                            (->Token :IDENT "oa" (coords '(3 4) '(3 5)))
                            (->Token :EOF "" (coords '(3 8) '(3 8))))
                      '())))))
+
+(deftest tokenize-commentary-test
+  (let [got (tokenize "\"\"\"\no!a\"oa\"\"\"")]
+    (is (= got (list (list (->Token :COMMENT "\"\"\"\no!a\"oa\"\"\"" (coords '(1 1) '(2 9)))
+                           (->Token :EOF "" (coords '(2 10) '(2 10))))
+                     '())))))
+
+(deftest tokenize-error-test
+  (let [got (tokenize "123!45")]
+    (is (= got (list (list (->Token :INT "123" (coords '(1 1) '(1 3)))
+                           (->Token :INT "45" (coords '(1 5) '(1 6)))
+                           (->Token :EOF "" (coords '(1 7) '(1 7))))
+                     (list "unexpected symbol ! at 1:4"))))))
+
+(deftest tokenize-error-after-colon-test
+  (let [got (tokenize "def:!1")]
+    (is (= got (list (list (->Token :DEF "def" (coords '(1 1) '(1 3)))
+                           (->Token :COLON ":" (coords '(1 4) '(1 4)))
+                           (->Token :INT "1" (coords '(1 6) '(1 6)))
+                           (->Token :EOF "" (coords '(1 7) '(1 7))))
+                     (list "unexpected symbol ! at 1:5"))))))
+
+(deftest tokenize-int-ident-test
+  (let [got (tokenize "123a")]
+    (is (= got (list (list (->Token :INT "123" (coords '(1 1) '(1 3)))
+                           (->Token :IDENT "a" (coords '(1 4) '(1 4)))
+                           (->Token :EOF "" (coords '(1 5) '(1 5))))
+                     '())))))
