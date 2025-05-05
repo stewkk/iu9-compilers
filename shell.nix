@@ -19,6 +19,7 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
     pkgs.clojure
     pkgs.clojure-lsp
     pkgs.leiningen
+    pkgs.flex
   ];
 
   nativeBuildInputs = [
