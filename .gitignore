@@ -5,3 +5,4 @@
 /lab5/.clj-kondo/
 /lab6/lexer
 /lab6/lex.yy.cc
+/.venv/

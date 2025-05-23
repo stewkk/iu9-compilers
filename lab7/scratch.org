@@ -1,0 +1,162 @@
+#+title: Scratch
+
+* [X] Составление абстрактного синтаксиса языка.
+
+#+begin_example
+Program -> Definition Program | Definition
+Definition -> Struct | Enum | Union
+DefinitionOrVariable -> Definition | NumVar
+NumVar -> NumType *? Variables ;
+NumType -> INT | DOUBLE | FLOAT | CHAR | SHORT | LONG
+Struct -> STRUCT NAME? StructFields? *? Variables? ;
+StructFields -> { DefinitionOrVariable* }
+Variables -> NAME (, NAME)*
+Enum -> ENUM NAME? EnumFields? *? Variables? ;
+EnumFields -> { EnumField (, EnumField)* ,? }
+EnumField -> NAME EnumFieldRhs?
+EnumFieldRhs -> = Expr
+Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF(Expr)
+Union -> UNION NAME? UnionFields? *? Variables? ;
+UnionFields -> { DefinitionOrVariable* }
+#+end_example
+
+* [X] Составление лексической структуры и конкретного синтаксиса языка.
+
+Лексическая структура:
+#+begin_example
+NUMBER ::= [0-9]+
+NAME ::= [a-zA-Z][a-zA-Z0-9_-]*
+INT ::= int
+...
+#+end_example
+
+Конкретный синтаксис:
+
+#+begin_example
+Program -> Definition Program | Definition
+Definition -> Struct | Enum | Union
+DefinitionOrVariable -> Definition | NumVar
+NumVar -> NumType PointerOpt Variables ;
+PointerOpt -> * | ε
+NumType -> INT | DOUBLE | FLOAT | CHAR | SHORT | LONG
+Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
+NameOpt -> NAME | ε
+VariablesOpt -> Variables | ε
+StructFieldsOpt -> StructFields | ε
+StructFields -> { DefinitionsOrVariables }
+DefinitionsOrVariables -> DefinitionOrVariable DefinitionsOrVariables | ε
+Variables -> NAME VariablesTail
+VariablesTail -> , NAME VariablesTail | ε
+Enum -> ENUM NameOpt EnumFieldsOpt PointerOpt VariablesOpt ;
+EnumFieldsOpt -> EnumFields | ε
+EnumFields -> { EnumField EnumFieldsTail CommaOpt }
+CommaOpt -> , | ε
+EnumFieldsTail -> , EnumField EnumFieldsTail | ε
+EnumField -> NAME EnumFieldRhsOpt
+EnumFieldRhsOpt -> EnumFieldRhs | ε
+EnumFieldRhs -> = Expr
+Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr ) | - Expr
+Union -> UNION NameOpt UnionFieldsOpt PointerOpt VariablesOpt ;
+UnionFieldsOpt -> UnionFields | ε
+UnionFields -> { DefinitionsOrVariables }
+#+end_example
+
+* [X] Описание абстрактного синтаксического дерева при помощи классов данных.
+
+#+begin_src 
+#!/usr/bin/env python3
+
+import abc
+import enum
+import typing
+from dataclasses import dataclass
+from typing_extensions import dataclass_transform
+
+
+class DefinitionBase(abc.ABC):
+    pass
+
+
+# Definition -> Struct | Enum | Union
+@dataclass
+class Definition:
+    data: DefinitionBase
+
+
+@dataclass
+class NumVariablesDefinition:
+    typename: str
+    is_pointer: bool
+    name: list[str]
+
+
+# Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
+class Struct(DefinitionBase):
+    name: str|None
+    fields: list[Definition|NumVariablesDefinition]
+    is_pointer: bool
+    variables: list[str]
+
+
+# Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr )
+class Expr(abc.ABC):
+    pass
+
+
+@dataclass
+class ExprNumber(Expr):
+    number: int
+
+
+@dataclass
+class ExprName(Expr):
+    name: str
+
+
+@dataclass
+class BinOpExpr(Expr):
+    lhs: Expr
+    op: str
+    rhs: Expr
+
+
+@dataclass
+class UnOpExpr(Expr):
+    op: str
+    expr: Expr
+
+
+# EnumField -> NAME EnumFieldRhsOpt
+class EnumField:
+    name: str
+    rhs: Expr|None
+
+
+# Enum -> ENUM NameOpt EnumFieldsOpt PointerOpt VariablesOpt ;
+class Enum(DefinitionBase):
+    name: str|None
+    fields: list[EnumField]
+    is_pointer: bool
+    variables: list[str]
+
+
+# Union -> UNION NameOpt UnionFieldsOpt PointerOpt VariablesOpt ;
+class Union(DefinitionBase):
+    name: str|None
+    fields: list[Definition|NumVariablesDefinition]
+    is_pointer: bool
+    variables: list[str]
+
+
+# Program -> Definition Program | Definition
+@dataclass
+class Program:
+    definitions: list[Definition]
+
+
+#+end_src
+
+* [ ] Описание входного языка при помощи библиотеки parser_edsl.
+
+
+* [ ] Тестирование на примере, содержащем все синтаксические конструкции входного языка.
