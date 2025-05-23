@@ -4,7 +4,6 @@ import abc
 import enum
 import typing
 from dataclasses import dataclass
-from typing_extensions import dataclass_transform
 
 
 class DefinitionBase(abc.ABC):
