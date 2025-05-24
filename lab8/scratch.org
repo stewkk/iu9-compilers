@@ -1,0 +1,53 @@
+#+title: Scratch
+
+* [ ] 1
+Составление описаний лексической структуры и грамматики входного языка на основе
+примера из индивидуального варианта.
+
+Пример грамматики в языке:
+
+#+begin_example
+% аксиома
+[axiom [E]]
+% правила грамматики
+[E    [T E']]
+[E'   [+ T E'] []]
+[T    [F T']]
+[T'   [* F T'] []]
+[F    [n] [( E )]]
+#+end_example
+
+Лексические домены:
+
+#+begin_example
+COMMENT ::= %.*
+TERM ::= [A-Z]+'?
+NONTERM ::= [^A-Z\[\]]+
+LB ::= [
+RB ::= ]
+#+end_example
+
+Грамматика:
+
+#+begin_example
+Grammar -> Rule Grammar
+Grammar -> ε
+Rule -> Nt Rhs
+Nt -> NONTERM
+Rhs -> Productions RhsTail
+RhsTail -> Productions RhsTail
+RhsTail -> ε
+Productions -> LB ProductionsBody RB
+ProductionsBody -> ε
+ProductionsBody -> TERM ProductionsBody
+ProductionsBody -> NONTERM ProductionsBody
+#+end_example
+
+* [ ] 2
+Разработка лексического анализатора для входного языка. Лексический анализ может
+выполняться любым из ранее изученых способов.
+* [ ] 3
+Составление (вручную) таблицы предсказывающего разбора для входного языка.
+* [ ] 4
+Разработка алгоритма предсказывающего разбора, работающего на основе порождённой
+таблицы. Реализация этого алгоритма.
