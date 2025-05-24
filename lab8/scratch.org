@@ -1,6 +1,6 @@
 #+title: Scratch
 
-* [ ] 1
+* [X] 1
 Составление описаний лексической структуры и грамматики входного языка на основе
 примера из индивидуального варианта.
 
@@ -17,9 +17,12 @@
 [F    [n] [( E )]]
 #+end_example
 
+Грамматика правил грамматик
+
 Лексические домены:
 
 #+begin_example
+AXIOM ::= "axiom"
 COMMENT ::= %.*
 NONTERM ::= [A-Z]+'?
 TERM ::= [^A-Z\[\]]+
@@ -30,8 +33,10 @@ RB ::= ]
 Грамматика:
 
 #+begin_example
-Grammar -> Rule Grammar
-Grammar -> ε
+Grammar -> Axiom Rules
+Axiom -> LB AXIOM LB Nt RN RB
+Rules -> Rule Rules
+Rules -> ε
 Rule -> Nt Rhs
 Nt -> NONTERM
 Rhs -> Productions RhsTail
@@ -43,7 +48,7 @@ ProductionsBody -> TERM ProductionsBody
 ProductionsBody -> NONTERM ProductionsBody
 #+end_example
 
-* [ ] 2
+* [X] 2
 Разработка лексического анализатора для входного языка. Лексический анализ может
 выполняться любым из ранее изученых способов.
 

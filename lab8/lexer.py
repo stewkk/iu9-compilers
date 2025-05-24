@@ -4,9 +4,11 @@ from lark import Lark, Token
 
 
 DOMAINS = """
-start: LB | RB | TERM | NONTERM
+start: LB | RB | TERM | NONTERM | AXIOM
+
 LB.1: "["
 RB.1: "]"
+AXIOM.1: "axiom"
 COMMENT.1: /%.*/
 NONTERM.1: /[A-Z]+'?/
 TERM.0: /[^\\s]+/
