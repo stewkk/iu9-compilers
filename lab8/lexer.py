@@ -11,7 +11,7 @@ RB.1: "]"
 AXIOM.1: "axiom"
 COMMENT.1: /%.*/
 NONTERM.1: /[A-Z]+'?/
-TERM.0: /[^\\s]+/
+TERM.0: /[^\\s\\]\\[]+/
 
 %import common (WS)
 %ignore COMMENT

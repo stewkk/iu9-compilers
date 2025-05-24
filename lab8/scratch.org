@@ -34,7 +34,7 @@ RB ::= ]
 
 #+begin_example
 Grammar -> Axiom Rules
-Axiom -> LB AXIOM LB Nt RN RB
+Axiom -> LB AXIOM LB Nt RB RB
 Rules -> Rule Rules
 Rules -> ε
 Rule -> LB Nt Rhs RB
@@ -58,7 +58,7 @@ ProductionsBody -> NONTERM ProductionsBody
 |                 | AXIOM | COMMENT | NONTERM                 | TERM                 | LB                    | RB | $ |
 |-----------------+-------+---------+-------------------------+----------------------+-----------------------+----+---|
 | Grammar         |       |         |                         |                      | Axiom Rules           |    |   |
-| Axiom           |       |         |                         |                      | LB AXIOM LB Nt RN RB  |    |   |
+| Axiom           |       |         |                         |                      | LB AXIOM LB Nt RB RB  |    |   |
 | Rules           |       |         |                         |                      | Rule Rules            |    | ε |
 | Rule            |       |         |                         |                      | LB Nt Rhs RB          |    |   |
 | Nt              |       |         | NONTERM                 |                      |                       |    |   |
