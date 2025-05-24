@@ -6,3 +6,4 @@
 /lab6/lexer
 /lab6/lex.yy.cc
 /.venv/
+/lab7/__pycache__/
