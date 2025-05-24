@@ -58,7 +58,7 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
     if [ -f requirements.txt ]; then
       pip install -r requirements.txt
     fi
-    pip install pytest
+    pip install pytest lark
 
     python --version
   '';
