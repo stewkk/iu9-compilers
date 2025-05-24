@@ -2,7 +2,8 @@
 
 import lexer
 from lark import Token
-import copy
+from dataclasses import dataclass
+from pprint import pprint
 
 
 TEXT = """
@@ -31,14 +32,20 @@ TABLE = {
 }
 
 
-def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table: dict[str, dict[str, list[str]]]):
+@dataclass
+class Node:
+    name: str
+    children: list['Node']
+
+
+def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table: dict[str, dict[str, list[str]]]) -> Node:
     tokens.append(Token('$', '$'))
-    res = []
-    mag = ['$', start]
+    res: Node = Node(start, list())
+    mag = [('$', None), (start, res)]
     token = tokens[0]
     top = None
     while True:
-        top = mag[-1]
+        top, top_node = mag[-1]
         if top == '$':
             break
         if top in terminals:
@@ -47,20 +54,22 @@ def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table:
                 tokens = tokens[1:]
                 token = tokens[0]
             else:
-                raise Exception('one')
+                raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}')
         elif top in table and token.type in table[top]:
             chain = table[top][token.type]
+            chain = list(map(lambda t: (t, Node(t, list())), chain))
+            for _, node in chain:
+                top_node.children.append(node)
             mag.pop()
             mag += reversed(chain)
-            res.append(f'{top} -> {chain}')
         else:
-            raise Exception('other')
+            raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}')
     return res
 
 def main():
     tokens = lexer.tokenize(TEXT)
     res = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
-    print(res)
+    pprint(res)
 
 if __name__ == "__main__":
     main()
