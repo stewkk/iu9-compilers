@@ -97,7 +97,7 @@ FIRST(TERM ProductionsBody) = TERM
 ** ProductionsBody -> NONTERM ProductionsBody
 FIRST(NONTERM ProductionsBody) = NONTERM
 
-* [ ] 4
+* [X] 4
 Разработка алгоритма предсказывающего разбора, работающего на основе порождённой
 таблицы. Реализация этого алгоритма.
 
@@ -105,5 +105,5 @@ FIRST(NONTERM ProductionsBody) = NONTERM
 ошибках, включающие координаты ошибки. Восстановление при ошибках, а также
 выдачу специфических текстовых описаний ошибок реализовывать не нужно.
 
-* [ ] 5
+* [X] 5
 Отображение в Graphviz
