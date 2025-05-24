@@ -37,7 +37,7 @@ Grammar -> Axiom Rules
 Axiom -> LB AXIOM LB Nt RN RB
 Rules -> Rule Rules
 Rules -> ε
-Rule -> Nt Rhs
+Rule -> LB Nt Rhs RB
 Nt -> NONTERM
 Rhs -> Productions RhsTail
 RhsTail -> Productions RhsTail
@@ -52,8 +52,50 @@ ProductionsBody -> NONTERM ProductionsBody
 Разработка лексического анализатора для входного языка. Лексический анализ может
 выполняться любым из ранее изученых способов.
 
-* [ ] 3
+* [X] 3
 Составление (вручную) таблицы предсказывающего разбора для входного языка.
+
+|                 | AXIOM | COMMENT | NONTERM                 | TERM                 | LB                    | RB | $ |
+|-----------------+-------+---------+-------------------------+----------------------+-----------------------+----+---|
+| Grammar         |       |         |                         |                      | Axiom Rules           |    |   |
+| Axiom           |       |         |                         |                      | LB AXIOM LB Nt RN RB  |    |   |
+| Rules           |       |         |                         |                      | Rule Rules            |    | ε |
+| Rule            |       |         |                         |                      | LB Nt Rhs RB          |    |   |
+| Nt              |       |         | NONTERM                 |                      |                       |    |   |
+| Rhs             |       |         |                         |                      | Productions RhsTail   |    |   |
+| RhsTail         |       |         |                         |                      | Productions RhsTail   | ε  |   |
+| Productions     |       |         |                         |                      | LB ProductionsBody RB |    |   |
+| ProductionsBody |       |         | NONTERM ProductionsBody | TERM ProductionsBody |                       | ε  |   |
+
+** Grammar -> Axiom Rules
+FIRST(Axiom Rules) = LB
+** Axiom -> LB AXIOM LB Nt RN RB
+FIRST(LB AXIOM LB Nt RN RB) = LB
+** Rules -> Rule Rules
+FIRST(Rule Rules) = LB
+** Rules -> ε
+FIRST(ε) = ε
+FOLLOW(Rules) = $
+** Rule -> LB Nt Rhs RB
+FIRST(LB Nt Rhs RB) = LB
+** Nt -> NONTERM
+FIRST(NONTERM) = NONTERM
+** Rhs -> Productions RhsTail
+FIRST(Productions RhsTail) = LB
+** RhsTail -> Productions RhsTail
+FIRST(Productions RhsTail) = LB
+** RhsTail -> ε
+FIRST(ε) = ε
+FOLLOW(RhsTail) = RB
+** Productions -> LB ProductionsBody RB
+FIRST(LB ProductionsBody RB) = LB
+** ProductionsBody -> ε
+FIRST(ε) = ε
+FOLLOW(ProductionsBody) = RB
+** ProductionsBody -> TERM ProductionsBody
+FIRST(TERM ProductionsBody) = TERM
+** ProductionsBody -> NONTERM ProductionsBody
+FIRST(NONTERM ProductionsBody) = NONTERM
 
 * [ ] 4
 Разработка алгоритма предсказывающего разбора, работающего на основе порождённой
