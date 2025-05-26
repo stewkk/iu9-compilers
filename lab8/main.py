@@ -40,9 +40,13 @@ class Node:
     children: list['Node']
 
 
+def new_uuid() -> str:
+    return "n"+str(uuid.uuid4()).replace('-', '')
+
+
 def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table: dict[str, dict[str, list[str]]]) -> Node:
     tokens.append(Token('$', '$'))
-    derivation_tree: Node = Node("n"+str(uuid.uuid4()).replace('-', ''), start, list())
+    derivation_tree: Node = Node(new_uuid(), start, list())
     mag = [('$', None), (start, derivation_tree)]
     token = tokens[0]
     top = None
@@ -52,6 +56,7 @@ def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table:
             break
         if top in terminals:
             if top == token.type:
+                top_node.children.append(Node(new_uuid(), f"{token} at {token.line}:{token.column}-{token.end_line}:{token.end_column}", list()))
                 mag.pop()
                 tokens = tokens[1:]
                 token = tokens[0]
@@ -59,9 +64,11 @@ def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table:
                 raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}')
         elif top in table and token.type in table[top]:
             chain = table[top][token.type]
-            chain = list(map(lambda t: (t, Node("n"+str(uuid.uuid4()).replace('-', ''), t, list())), chain))
+            chain = list(map(lambda t: (t, Node(new_uuid(), t, list())), chain))
             for _, node in chain:
                 top_node.children.append(node)
+            if not chain:
+                top_node.children.append(Node(new_uuid(), 'ε', list()))
             mag.pop()
             mag += reversed(chain)
         else:
@@ -87,6 +94,7 @@ def main():
     tokens = lexer.tokenize(TEXT)
     derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
     print(get_dot(derivation_tree))
+
 
 if __name__ == "__main__":
     main()
