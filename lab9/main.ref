@@ -1,8 +1,27 @@
-$ENTRY Main {
-    = ;
+$ENTRY Go {
+    /* empty */ = <Prout <Tokenize <ReadAll>>>;
+}
+
+ReadAll {
+    /* empty */ = <ReadAll <Card>>;
+    e.Text 0 = e.Text;
+    e.Text = <ReadAll e.Text '\n' <Card>>;
 }
 
 /* <Tokenize e.Text> == (s.Token*) s.Error* */
 Tokenize {
-    = ;
+    e.Text = <DoTokenize e.Text () () 1 1>;
+}
+
+DoTokenize {
+    e.Text (e.Tokens) (e.Errors) s.Line s.Column
+    , e.Text
+    {
+        s.First e.Other, '\n\t ' : e.1 s.First e.2 = <DoTokenize e.Other (e.Tokens) (e.Errors) <Move s.First s.Line s.Column>>;
+        s.P e.Value s.P e.Other, '\'\"' : e.1 s.P e.2 = <DoTokenize e.Other (e.Tokens (e.Value s.Line s.Column)) (e.Errors) <Move s.P e.Value s.P s.Line s.Column>>;
+    }
+}
+
+Move {
+    e.Text s.Line s.Column = s.Line s.Column
 }
