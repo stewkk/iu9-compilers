@@ -8,7 +8,7 @@
 ассоциативности операций. Синтаксический анализатор должен быть написан при
 помощи методики рекурсивного спуска.
 
-#+begin_src
+#+begin_src c++
 /* Декартово произведение */
 CartProd {
   (t.X e.X) (e.Y) = <CartProd-Bind t.X e.Y> <CartProd (e.X) (e.Y)>;
@@ -57,10 +57,40 @@ Pattern -> PatternElement+
 PatternElement -> Variable | STR | NUMBER | IDENT | \( Pattern \)
 Result -> (PatternElement | Call)+
 Variable -> (s | t | e) . (IDENT | NUMBER)
-Call -> <Name Result>
+Call -> < Name Result >
 #+end_example
 
-* [ ] Составление лексической структуры и конкретного синтаксиса языка в LL(1) РБНФ.
+* [X] Составление лексической структуры и конкретного синтаксиса языка в LL(1) РБНФ.
+
+Лесические домены:
+
+#+begin_example
+VAR ::= (s|t|e)\.(IDENT|NUMBER)
+STR ::= C string: 'abc', "abc\"\n"
+IDENT ::= [a-zA-Z][a-zA-Z0-9_-]*
+NUMBER ::= [0-9]+
+{, }, <, >
+#+end_example
+
+LL(1) РБНФ:
+
+#+begin_example
+Program -> Function*
+Function -> Name Body
+Name -> IDENT
+Body -> { Sentence+ }
+Sentence -> Lhs Rhs ;
+Lhs -> Pattern (, Result : Pattern)*
+Rhs -> = Result | , Result : Body
+Pattern -> PatternElement+
+PatternElement -> Variable | STR | NUMBER | IDENT | \( Pattern \)
+Result -> (PatternElement | Call)+
+Variable -> VAR
+Call -> < Name Result >
+#+end_example
+
 * [ ] Описание абстрактного синтаксического дерева при помощи типов данных выбранного студентом языка реализации.
+
 * [ ] Написание лексического анализатора (можно использовать любой из ранее рассмотренных способов).
+
 * [ ] Написание синтаксического анализатора методом рекурсивного спуска.

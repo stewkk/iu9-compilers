@@ -1,0 +1,8 @@
+$ENTRY Main {
+    = ;
+}
+
+/* <Tokenize e.Text> == (s.Token*) s.Error* */
+Tokenize {
+    = ;
+}

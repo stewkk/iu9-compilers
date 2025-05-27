@@ -55,6 +55,8 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
 
     export LD_LIBRARY_PATH=$NIX_LD_LIBRARY_PATH
     export PYTHONPATH="${pythonWithPytest}/lib/python3.10/site-packages:$PYTHONPATH"
+    export PATH="/home/st/c/iu9-impl-prog-lang-abstractions/lab2/refal:$PATH"
+    export REF5RSL="/home/st/c/iu9-impl-prog-lang-abstractions/lab2/refal/refal-5-framework/lib:/home/st/c/iu9-impl-prog-lang-abstractions/lab2/refal/refal-5-framework/lib/posix:$REF5RSL"
 
     if [ -f requirements.txt ]; then
       pip install -r requirements.txt
@@ -62,5 +64,6 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
     pip install pytest lark
 
     python --version
+
   '';
 }
