@@ -43,7 +43,23 @@ NextId {
 
 Чистый и на функциональном языке
 
-* [ ] Составление абстрактного синтаксиса языка.
+* [X] Составление абстрактного синтаксиса языка.
+
+#+begin_example
+Program -> Function*
+Function -> Name Body
+Name -> IDENT
+Body -> { Sentence+ }
+Sentence -> Lhs Rhs ;
+Lhs -> Pattern (, Result : Pattern)*
+Rhs -> = Result | , Result : Body
+Pattern -> PatternElement+
+PatternElement -> Variable | STR | NUMBER | IDENT | \( Pattern \)
+Result -> (PatternElement | Call)+
+Variable -> (s | t | e) . (IDENT | NUMBER)
+Call -> <Name Result>
+#+end_example
+
 * [ ] Составление лексической структуры и конкретного синтаксиса языка в LL(1) РБНФ.
 * [ ] Описание абстрактного синтаксического дерева при помощи типов данных выбранного студентом языка реализации.
 * [ ] Написание лексического анализатора (можно использовать любой из ранее рассмотренных способов).

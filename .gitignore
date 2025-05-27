@@ -8,3 +8,6 @@
 /.venv/
 /lab7/__pycache__/
 /lab8/__pycache__/
+/lab11/main
+/lab11/main.tab.c
+/lab11/main.tab.h

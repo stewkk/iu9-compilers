@@ -30,6 +30,7 @@ mkShell.override { stdenv = pkgs.llvmPackages_18.stdenv; } {
     pkgs.flex
     pythonWithPytest
     pkgs.pyright
+    pkgs.bison
   ];
 
   nativeBuildInputs = [
