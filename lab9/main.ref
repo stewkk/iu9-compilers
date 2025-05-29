@@ -1,3 +1,12 @@
+/* t.Token ::= (s.Domain t.Position t.Position e.Attr) */
+/* s.Domain ::= s.WORD */
+/* t.Position ::= (s.Line s.Column) */
+/* s.Line ::= s.NUMBER */
+/* s.Column ::= s.NUMBER */
+/* e.Attr = e.ANY */
+
+/* t.Error ::= (s.CHAR+) */
+
 $ENTRY Go {
     /* empty */ = <Prout <Tokenize <ReadAll>>>;
 }
@@ -8,20 +17,31 @@ ReadAll {
     e.Text = <ReadAll e.Text '\n' <Card>>;
 }
 
-/* <Tokenize e.Text> == (s.Token*) s.Error* */
+/* <Tokenize e.Text> == (t.Token*) t.Error* */
 Tokenize {
-    e.Text = <DoTokenize e.Text () () 1 1>;
+    e.Text = <DoTokenize e.Text () () (1 1)>;
 }
 
 DoTokenize {
-    e.Text (e.Tokens) (e.Errors) s.Line s.Column
+    '' (e.Tokens) (e.Errors) t.Position = (e.Tokens) e.Errors;
+    e.Text (e.Tokens) (e.Errors) t.Position
     , e.Text
-    {
-        s.First e.Other, '\n\t ' : e.1 s.First e.2 = <DoTokenize e.Other (e.Tokens) (e.Errors) <Move s.First s.Line s.Column>>;
-        s.P e.Value s.P e.Other, '\'\"' : e.1 s.P e.2 = <DoTokenize e.Other (e.Tokens (e.Value s.Line s.Column)) (e.Errors) <Move s.P e.Value s.P s.Line s.Column>>;
-    }
+    : {
+        s.First e.Other
+            , '\t '
+            : e.1 s.First e.2
+            = <DoTokenize e.Other (e.Tokens) (e.Errors) <Move s.First t.Position>>;
+        s.P e.Value s.P e.Other
+            , '\'\"'
+            : e.1 s.P e.2
+            = <DoTokenize e.Other (e.Tokens (e.Value t.Position)) (e.Errors) <Move s.P e.Value s.P t.Position>>;
+        s.First e.Other
+            , '{}<>'
+            : e.1 s.First e.2
+            = <DoTokenize e.Other (e.Tokens (s.First t.Position)) (e.Errors) <Move s.First t.Position>>;
+    };
 }
 
 Move {
-    e.Text s.Line s.Column = s.Line s.Column
+    e.Text (s.Line s.Column) = (s.Line s.Column);
 }

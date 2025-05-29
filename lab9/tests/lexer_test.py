@@ -6,7 +6,7 @@ import subprocess
 
 @pytest.mark.parametrize("stdin, expected_stdout",
                          [
-                             ("",
+                             ("{ }",
                               ""),
                          ])
 def test_lexer(stdin, expected_stdout):
@@ -17,6 +17,7 @@ def test_lexer(stdin, expected_stdout):
         ],
         capture_output=True,
         text=True,
+        input=stdin,
     )
     output = process.stdout, process.stderr
 
