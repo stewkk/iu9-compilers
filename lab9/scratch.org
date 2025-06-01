@@ -69,7 +69,8 @@ VAR ::= (s|t|e)\.(IDENT|NUMBER)
 STR ::= C string: 'abc', "abc\"\n"
 IDENT ::= [a-zA-Z][a-zA-Z0-9_-]*
 NUMBER ::= [0-9]+
-{, }, <, >
+COMMENT ::= c comment /* */
+{, }, <, >, (, ), =
 #+end_example
 
 LL(1) РБНФ:
