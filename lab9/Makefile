@@ -7,6 +7,7 @@ test: compile
 compile:
 	@refc main.ref
 	@refc lexer.ref
+	@refc tests/lexer.ref
 
 clean:
 	@rm *.rsl *.lis

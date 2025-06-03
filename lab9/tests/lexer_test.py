@@ -174,7 +174,7 @@ def test_lexer(stdin, expected_stdout):
     process = subprocess.run(
         [
             "refgo",
-            "main.rsl+LibraryEx.rsl",
+            "tests/lexer.rsl+lexer.rsl+LibraryEx.rsl",
         ],
         capture_output=True,
         text=True,

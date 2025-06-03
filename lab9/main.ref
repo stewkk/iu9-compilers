@@ -4,10 +4,40 @@ $EXTERN Map;
 *$FROM lexer
 $EXTERN Tokenize, ReadAll, TokenToString;
 
+/* <N (e.Symbols) t.NTerm? e.Tokens t.ErrorList> */
+/* == t.NTerm e.Tokens t.ErrorList */
+/* e.Symbol ::= { t.Token | t.NTerm }* */
+/* e.Tokens = t.Token* */
+/* t.Token ::= (s.Tag t.Pos e.Info) */
+/* t.NTerm ::= (s.Tag e.Info) */
+
+/* Program -> Function* */
+/* <Program (e.Children) e.Tokens t.ErrorList> == t.Child e.Tokens t.ErrorList */
+
+/* t.Node ::= (s.NT s.Child*) */
+/* s.Child ::= t.Node | s.Token */
+Program {
+    (e.Children) t.ErrorList = (Program e.Children) t.ErrorList;
+    (e.Children) e.Tokens t.ErrorList
+    , <Function () e.Tokens t.ErrorList>
+    : {
+        t.Child e.NewTokens t.NewErrorList = <Program (e.Children t.Child) e.NewTokens t.NewErrorList>;
+    }
+}
+
+Function {
+    () (IDENT e.Rest) e.Tokens t.ErrorList = (Function e.Rest) t.ErrorList;
+}
+
+Parse {
+    e.Tokens = <Program () e.Tokens ()>;
+}
+
 $ENTRY Go {
     /* empty */
     , <Tokenize <ReadAll>>
     : {
-        (e.Tokens) e.Errors = <Map Println <Map TokenToString e.Tokens>>;
+        (e.Tokens) = <Prout <Parse e.Tokens>>;
+        (e.Tokens) e.Errors = <Map Println e.Tokens>;
     };
 }

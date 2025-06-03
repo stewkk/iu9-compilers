@@ -192,3 +192,4 @@ PositionToString {
 Move {
     e.Text (s.Line s.Column) = (s.Line s.Column);
 }
+

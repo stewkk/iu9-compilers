@@ -1,0 +1,13 @@
+*$FROM LibraryEx
+$EXTERN Map;
+
+*$FROM lexer
+$EXTERN Tokenize, ReadAll, TokenToString, Println;
+
+$ENTRY Go {
+    /* empty */
+    , <Tokenize <ReadAll>>
+    : {
+        (e.Tokens) e.Errors = <Map Println <Map TokenToString e.Tokens>>;
+    };
+}
