@@ -39,7 +39,7 @@ DoTokenize {
             : e.1 s.P e.2
             , <EndsWith '\\' e.Value>
             : False
-            = <DoTokenize e.Other (e.Tokens <MakeToken "STR" t.Position e.Value>) (e.Errors) <Move s.P e.Value s.P t.Position>>;
+            = <DoTokenize e.Other (e.Tokens <MakeToken "STR" t.Position s.P e.Value s.P>) (e.Errors) <Move s.P e.Value s.P t.Position>>;
         s.First e.Other
             , '{}<>()=;:,'
             : e.1 s.First e.2
@@ -178,7 +178,7 @@ GetSymbolDomain {
 
 /* <MakeToken s.Domain t.Position e.Image> == t.Token */
 MakeToken {
-    s.Domain t.Position e.Image = (s.Domain t.Position t.Position e.Image);
+    s.Domain t.Position e.Image = (s.Domain t.Position <Move e.Image t.Position> e.Image);
 }
 
 $ENTRY TokenToString {
@@ -190,6 +190,7 @@ PositionToString {
 }
 
 Move {
-    e.Text (s.Line s.Column) = (s.Line s.Column);
+    (s.Line s.Column) = (s.Line s.Column);
+    '\n' e.Rest (s.Line s.Column) = <Move e.Rest (<+ 1 s.Line> 1)>;
+    s.Symbol e.Rest (s.Line s.Column) = <Move e.Rest (s.Line <+ 1 s.Column>)>;
 }
-
