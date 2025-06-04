@@ -229,6 +229,7 @@ def gen_table(tree: Node):
     dfs(tree)
     print(AXIOM)
     print(RULES)
+    table = dict()
 
     calc_first()
 
@@ -236,19 +237,36 @@ def gen_table(tree: Node):
     follow = calc_follow()
     print(follow)
 
+    for rule in RULES:
+        lhs = rule[0]
+        table[lhs] = dict()
 
-    table = dict()
     for rule in RULES:
         lhs = rule[0]
         for rhs in rule[1]:
-            pass
+            f = first(rhs)
+            for a in f:
+                if a not in table[lhs]:
+                    table[lhs][a] = list()
+                if rhs in table[lhs][a]:
+                    raise Exception("")
+                table[lhs][a] = rhs
+            if 'ε' in f:
+                for b in follow[lhs]:
+                    if b not in table[lhs]:
+                        table[lhs][b] = list()
+                    if rhs in table[lhs][b]:
+                        raise Exception("alarm")
+                    table[lhs][b] = rhs
+    return table
 
 
 def main():
     tokens = lexer.tokenize(TEXT)
     derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
     # print(get_dot(derivation_tree))
-    gen_table(derivation_tree)
+    table = gen_table(derivation_tree)
+    print(table)
 
 
 if __name__ == "__main__":
