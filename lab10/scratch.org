@@ -1,7 +1,53 @@
 #+title: Scratch
 
+Оригинальная грамматика:
 
-1. [ ] Переписывание грамматики входного языка на самом входном языке.
+#+begin_example
+Grammar -> Axiom Rules
+Axiom -> LB AXIOM LB Nt RB RB
+Rules -> Rule Rules
+Rules -> ε
+Rule -> LB Nt Rhs RB
+Nt -> NONTERM
+Rhs -> Productions RhsTail
+RhsTail -> Productions RhsTail
+RhsTail -> ε
+Productions -> LB ProductionsBody RB
+ProductionsBody -> ε
+ProductionsBody -> TERM ProductionsBody
+ProductionsBody -> NONTERM ProductionsBody
+#+end_example
+
+Грамматика арифметических выражений:
+
+#+begin_example
+% аксиома
+[axiom [E]]
+% правила грамматики
+[E    [T E']]
+[E'   [+ T E'] []]
+[T    [F T']]
+[T'   [* F T'] []]
+[F    [n] [( E )]]
+#+end_example
+
+Грамматика на входном языке:
+
+#+begin_example
+[axiom [AXIOM GRAMMAR]]
+[GRAMMAR [AXIOM RULES]]
+[AXIOM ["[" "axiom" "]" NT "]" "]"]]
+[RULES [RULE RULES] []]
+[RULE ["[" NT RHS "]"]]
+[NT [nonterm]]
+[RHS [PRODUCTIONS "RHSTAIL"]]
+[RHSTAIL [PRODUCTIONS RHSTAIL] []]
+[PRODUCTIONS ["[" PRODUCTIONSBODY "]"]]
+[PRODUCTIONSBODY [term PRODUCTIONSBODY] [nonterm PRODUCTIONSBODY] []]
+#+end_example
+
+
+1. [X] Переписывание грамматики входного языка на самом входном языке.
 2. [ ] Добавление в программу, написанную на лабораторной работе 2.3, генератора
    таблицы разбора на основе дерева разбора. Таблица разбора должна представлять
    собой инициализированный двумерный массив на рабочем языке (он совпадает с
