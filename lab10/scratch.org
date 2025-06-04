@@ -34,15 +34,15 @@ ProductionsBody -> NONTERM ProductionsBody
 Грамматика на входном языке:
 
 #+begin_example
-[axiom [AXIOM GRAMMAR]]
+[axiom [GRAMMAR]]
 [GRAMMAR [AXIOM RULES]]
-[AXIOM ["[" "axiom" "]" NT "]" "]"]]
+[AXIOM [lb "axiom" lb NT rb rb]]
 [RULES [RULE RULES] []]
-[RULE ["[" NT RHS "]"]]
+[RULE [lb NT RHS rb]]
 [NT [nonterm]]
-[RHS [PRODUCTIONS "RHSTAIL"]]
+[RHS [PRODUCTIONS RHSTAIL]]
 [RHSTAIL [PRODUCTIONS RHSTAIL] []]
-[PRODUCTIONS ["[" PRODUCTIONSBODY "]"]]
+[PRODUCTIONS [lb PRODUCTIONSBODY rb]]
 [PRODUCTIONSBODY [term PRODUCTIONSBODY] [nonterm PRODUCTIONSBODY] []]
 #+end_example
 

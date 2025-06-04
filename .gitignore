@@ -14,3 +14,4 @@
 /lab9/main.rsl
 /lab9/tests/__pycache__/
 *.rsl
+/lab10/__pycache__/

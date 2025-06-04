@@ -5,17 +5,20 @@ from lark import Token
 from dataclasses import dataclass
 from pprint import pprint
 import uuid
+from typing import Any
 
 
 TEXT = """
-% аксиома
-[axiom [E]]
-% правила грамматики
-[E    [T E']]
-[E'   [+ T E'] []]
-[T    [F T']]
-[T'   [* F T'] []]
-[F    [n] [( E )]]
+[axiom [GRAMMAR]]
+[GRAMMAR [AXIOM RULES]]
+[AXIOM [lb "axiom" lb NT rb rb]]
+[RULES [RULE RULES] []]
+[RULE [lb NT RHS rb]]
+[NT [nonterm]]
+[RHS [PRODUCTIONS RHSTAIL]]
+[RHSTAIL [PRODUCTIONS RHSTAIL] []]
+[PRODUCTIONS [lb PRODUCTIONSBODY rb]]
+[PRODUCTIONSBODY [term PRODUCTIONSBODY] [nonterm PRODUCTIONSBODY] []]
 """
 
 TABLE = {
@@ -38,6 +41,7 @@ class Node:
     uuid: str
     name: str
     children: list['Node']
+    attr: Any
 
 
 def new_uuid() -> str:
@@ -46,7 +50,7 @@ def new_uuid() -> str:
 
 def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table: dict[str, dict[str, list[str]]]) -> Node:
     tokens.append(Token('$', '$'))
-    derivation_tree: Node = Node(new_uuid(), start, list())
+    derivation_tree: Node = Node(new_uuid(), start, list(), None)
     mag = [('$', None), (start, derivation_tree)]
     token = tokens[0]
     top = None
@@ -56,23 +60,23 @@ def top_down_parse(tokens: list[Token], start: str, terminals: list[str], table:
             break
         if top in terminals:
             if top == token.type:
-                top_node.children.append(Node(new_uuid(), f"{token} at {token.line}:{token.column}-{token.end_line}:{token.end_column}", list()))
+                top_node.children.append(Node(new_uuid(), f"{token} at {token.line}:{token.column}-{token.end_line}:{token.end_column}", list(), f'{token}'))
                 mag.pop()
                 tokens = tokens[1:]
                 token = tokens[0]
             else:
-                raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}')
+                raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}, {token}')
         elif top in table and token.type in table[top]:
             chain = table[top][token.type]
-            chain = list(map(lambda t: (t, Node(new_uuid(), t, list())), chain))
+            chain = list(map(lambda t: (t, Node(new_uuid(), t, list(), None)), chain))
             for _, node in chain:
                 top_node.children.append(node)
             if not chain:
-                top_node.children.append(Node(new_uuid(), 'ε', list()))
+                top_node.children.append(Node(new_uuid(), 'ε', list(), ""))
             mag.pop()
             mag += reversed(chain)
         else:
-            raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}')
+            raise Exception(f'Error at {token.line}:{token.column}-{token.end_line}:{token.end_column}, {token}')
     return derivation_tree
 
 
@@ -90,14 +94,110 @@ def get_dot(tree: Node) -> str:
         "}\n"
 
 
+def get_child(node: Node, name: str) -> Node|None:
+    return next(filter(lambda node: node.name == name, node.children), None)
+
+
+def set_axiom(root: Node) -> None:
+    nt = get_child(root, "Nt")
+    assert nt is not None
+    token = get_child(nt, "NONTERM")
+    global AXIOM
+    assert token is not None
+    AXIOM = token.children[0].attr
+
+
+"""
+Rule
+  LB
+    [ at 3:1-3:2
+  Nt
+    NONTERM
+      GRAMMAR at 3:2-3:9
+  Rhs
+    Productions
+      LB
+        [ at 3:10-3:11
+      ProductionsBody
+        NONTERM
+          AXIOM at 3:11-3:16
+        ProductionsBody
+          NONTERM
+            RULES at 3:17-3:22
+          ProductionsBody
+            ε
+      RB
+        ] at 3:22-3:23
+    RhsTail
+      ε
+  RB
+    ] at 3:23-3:24
+"""
+
+def handle_rule(root: Node) -> None:
+    lhs = get_child(root, "Nt")
+    assert lhs is not None
+
+    lhs = get_child(lhs, "NONTERM")
+    assert lhs is not None
+
+    lhs = lhs.children[0].attr
+
+    global RULES
+    res_rhs = list()
+
+    rhs = get_child(root, "Rhs")
+    while rhs is not None and rhs.children[0].attr != "":
+        productions = get_child(rhs, "Productions")
+        assert productions is not None
+        productions = get_child(productions, "ProductionsBody")
+
+        res_productions = list()
+
+        while productions is not None and productions.children[0].attr != "":
+            term = get_child(productions, "TERM")
+            nonterm = get_child(productions, "NONTERM")
+            if term is not None:
+                res_productions.append(term.children[0].attr)
+            if nonterm is not None:
+                res_productions.append(nonterm.children[0].attr)
+            productions = get_child(productions, "ProductionsBody")
+
+        res_rhs.append(res_productions)
+
+        rhs = get_child(rhs, "RhsTail")
+
+    RULES.append((lhs, res_rhs))
+
+
+
+ACTIONS = {
+    "Axiom": set_axiom,
+    "Rule": handle_rule,
+}
+AXIOM = None
+RULES = list()
+
+
+def dfs(tree: Node, level=0):
+    if tree.name in ACTIONS:
+        ACTIONS[tree.name](tree)
+    print('  '*level+tree.name)
+    for child in tree.children:
+        dfs(child, level+1)
+
+
 def gen_table(tree: Node):
-    pass
+    dfs(tree)
 
 
 def main():
     tokens = lexer.tokenize(TEXT)
     derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
-    print(get_dot(derivation_tree))
+    # print(get_dot(derivation_tree))
+    gen_table(derivation_tree)
+    print(AXIOM)
+    print(RULES)
 
 
 if __name__ == "__main__":
