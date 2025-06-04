@@ -178,11 +178,35 @@ def first(rhs):
 
 
 def calc_follow():
+    follow = dict()
+    for rule in RULES:
+        lhs = rule[0]
+        follow[lhs] = set()
+
+    follow[AXIOM] = follow[AXIOM].union({'$'})
+
     for rule in RULES:
         lhs = rule[0]
         for rhs in rule[1]:
-            pass
-    return dict()
+            for i, t in enumerate(rhs):
+                if is_nonterm(t):
+                    follow[t] = follow[t].union(first(rhs[i+1:]).difference({'ε'}))
+
+    tmp = None
+    while tmp != follow:
+        tmp = copy.deepcopy(follow)
+        for rule in RULES:
+            lhs = rule[0]
+            for rhs in rule[1]:
+                if len(rhs) == 0:
+                    continue
+                if is_nonterm(rhs[-1]):
+                    follow[rhs[-1]] = follow[rhs[-1]].union(follow[lhs])
+                for i, t in enumerate(rhs[:-1]):
+                    if is_nonterm(t) and 'ε' in first(rhs[i+1:]):
+                        follow[t] = follow[t].union(follow[lhs])
+
+    return follow
 
 
 def calc_first():
@@ -209,8 +233,9 @@ def gen_table(tree: Node):
     calc_first()
 
     print(FIRST)
+    follow = calc_follow()
+    print(follow)
 
-    # follow = calc_follow()
 
     table = dict()
     for rule in RULES:
