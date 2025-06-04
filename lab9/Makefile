@@ -1,5 +1,5 @@
 run: compile
-	@echo "------------------------------" && refgo main.rsl+LibraryEx.rsl+lexer.rsl
+	@echo "------------------------------" && refgo main.rsl+LibraryEx.rsl+lexer.rsl -l20
 
 test: compile
 	@pytest -vvv tests/*.py
