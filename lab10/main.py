@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pprint import pprint
 import uuid
 from typing import Any
+import copy
 
 
 TEXT = """
@@ -107,33 +108,6 @@ def set_axiom(root: Node) -> None:
     AXIOM = token.children[0].attr
 
 
-"""
-Rule
-  LB
-    [ at 3:1-3:2
-  Nt
-    NONTERM
-      GRAMMAR at 3:2-3:9
-  Rhs
-    Productions
-      LB
-        [ at 3:10-3:11
-      ProductionsBody
-        NONTERM
-          AXIOM at 3:11-3:16
-        ProductionsBody
-          NONTERM
-            RULES at 3:17-3:22
-          ProductionsBody
-            ε
-      RB
-        ] at 3:22-3:23
-    RhsTail
-      ε
-  RB
-    ] at 3:23-3:24
-"""
-
 def handle_rule(root: Node) -> None:
     lhs = get_child(root, "Nt")
     assert lhs is not None
@@ -170,13 +144,13 @@ def handle_rule(root: Node) -> None:
     RULES.append((lhs, res_rhs))
 
 
-
 ACTIONS = {
     "Axiom": set_axiom,
     "Rule": handle_rule,
 }
 AXIOM = None
 RULES = list()
+FIRST = dict()
 
 
 def dfs(tree: Node, level=0):
@@ -187,8 +161,62 @@ def dfs(tree: Node, level=0):
         dfs(child, level+1)
 
 
+def is_nonterm(t):
+    return t.isupper() or (t[:-1].isupper() and t[-1] == "'")
+
+
+def first(rhs):
+    if len(rhs) == 0:
+        return {'ε'}
+    if not is_nonterm(rhs[0]):
+        return {rhs[0]}
+    global FIRST
+    f = FIRST[rhs[0]]
+    if 'ε' not in f:
+        return f
+    return f.difference({'ε'}).union(first(rhs[1:]))
+
+
+def calc_follow():
+    for rule in RULES:
+        lhs = rule[0]
+        for rhs in rule[1]:
+            pass
+    return dict()
+
+
+def calc_first():
+    global FIRST
+
+    for rule in RULES:
+        lhs = rule[0]
+        FIRST[lhs] = set()
+
+    tmp = None
+    while tmp != FIRST:
+        tmp = copy.deepcopy(FIRST)
+        for rule in RULES:
+            lhs = rule[0]
+            for rhs in rule[1]:
+                FIRST[lhs] = FIRST[lhs].union(first(rhs))
+
+
 def gen_table(tree: Node):
     dfs(tree)
+    print(AXIOM)
+    print(RULES)
+
+    calc_first()
+
+    print(FIRST)
+
+    # follow = calc_follow()
+
+    table = dict()
+    for rule in RULES:
+        lhs = rule[0]
+        for rhs in rule[1]:
+            pass
 
 
 def main():
@@ -196,8 +224,6 @@ def main():
     derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
     # print(get_dot(derivation_tree))
     gen_table(derivation_tree)
-    print(AXIOM)
-    print(RULES)
 
 
 if __name__ == "__main__":
