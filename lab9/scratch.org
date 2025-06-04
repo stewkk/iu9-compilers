@@ -70,7 +70,7 @@ STR ::= C string: 'abc', "abc\"\n"
 IDENT ::= [a-zA-Z][a-zA-Z0-9_-]*
 NUMBER ::= [0-9]+
 COMMENT ::= c comment /* */
-{, }, <, >, (, ), =
+{, }, <, >, (, ), =, ;, :, \,
 #+end_example
 
 LL(1) РБНФ:
@@ -80,12 +80,13 @@ Program -> Function*
 Function -> Name Body
 Name -> IDENT
 Body -> { Sentence+ }
-Sentence -> Lhs Rhs ;
-Lhs -> Pattern (, Result : Pattern)*
-Rhs -> = Result | , Result : Body
-Pattern -> PatternElement+
+Sentence -> SentenceBody ;
+SentenceBody -> Pattern SentenceBodyTail
+SentenceBodyTail -> = Result | , Result : BlockTail
+BlockTail -> Pattern SentenceBodyTail | Body
+Pattern -> PatternElement*
 PatternElement -> Variable | STR | NUMBER | IDENT | \( Pattern \)
-Result -> (PatternElement | Call)+
+Result -> (PatternElement | Call)*
 Variable -> VAR
 Call -> < Name Result >
 #+end_example

@@ -45,7 +45,23 @@ Body {
 }
 
 Sentence {
-    () e.Tokens t.ErrorList = (Sentence some) e.Tokens t.ErrorList;
+    () (SentenceBody e.Rest) e.Tokens t.ErrorList = <Sentence ((SentenceBody e.Rest)) e.Tokens t.ErrorList>;
+    () e.Tokens t.ErrorList = <Sentence () <SentenceBody () e.Tokens t.ErrorList>>;
+    ((SentenceBody e.1)) (SEMICOLON e.2) e.Tokens t.ErrorList = (Sentence e.1) e.Tokens t.ErrorList;
+}
+
+SentenceBody {
+    () (Pattern e.1) e.Tokens t.ErrorList = <SentenceBody ((Pattern e.1)) e.Tokens t.ErrorList>;
+    () e.Tokens t.ErrorList = <SentenceBody () <Pattern () e.Tokens t.ErrorList>>;
+    ((Pattern e.1)) (SentenceBodyTail e.2) e.Tokens t.ErrorList = (SentenceBody )
+}
+
+Pattern {
+    = ;
+}
+
+Result {
+    = ;
 }
 
 Parse {
