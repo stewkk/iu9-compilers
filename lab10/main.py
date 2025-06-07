@@ -10,16 +10,14 @@ import copy
 
 
 TEXT = """
-[axiom [GRAMMAR]]
-[GRAMMAR [AXIOM RULES]]
-[AXIOM [lb "axiom" lb NT rb rb]]
-[RULES [RULE RULES] []]
-[RULE [lb NT RHS rb]]
-[NT [nonterm]]
-[RHS [PRODUCTIONS RHSTAIL]]
-[RHSTAIL [PRODUCTIONS RHSTAIL] []]
-[PRODUCTIONS [lb PRODUCTIONSBODY rb]]
-[PRODUCTIONSBODY [term PRODUCTIONSBODY] [nonterm PRODUCTIONSBODY] []]
+% аксиома
+[axiom [E]]
+% правила грамматики
+[E    [T E']]
+[E'   [plus T E'] []]
+[T    [F T']]
+[T'   [star F T'] []]
+[F    [number] [lcb E rcb]]
 """
 
 TABLE = {
@@ -265,7 +263,7 @@ def gen_table(tree: Node):
 
 def main():
     tokens = lexer.tokenize(TEXT)
-    derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
+    derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
     # print(get_dot(derivation_tree))
     table = gen_table(derivation_tree)
     res_table = dict()
