@@ -268,7 +268,25 @@ def main():
     derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM'], TABLE)
     # print(get_dot(derivation_tree))
     table = gen_table(derivation_tree)
-    print(table)
+    res_table = dict()
+    for key, value in table.items():
+        key = key[0]+key[1:].lower()
+        res_table[key] = dict()
+        for inner, inner_value in value.items():
+            inner_array = copy.deepcopy(inner_value)
+            inner_key = inner.upper()
+            res = list()
+            for el in inner_array:
+                if el[0] == '"':
+                    res.append(el[1:-1].upper())
+                elif el.islower():
+                    res.append(el.upper())
+                else:
+                    res.append(el[0]+el[1:].lower())
+            res_table[key][inner_key] = res
+
+    print()
+    print(res_table)
 
 
 if __name__ == "__main__":
