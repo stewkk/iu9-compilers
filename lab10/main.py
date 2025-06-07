@@ -246,6 +246,8 @@ def gen_table(tree: Node):
         for rhs in rule[1]:
             f = first(rhs)
             for a in f:
+                if a == 'ε':
+                    continue
                 if a not in table[lhs]:
                     table[lhs][a] = list()
                 if rhs in table[lhs][a]:
