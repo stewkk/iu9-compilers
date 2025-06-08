@@ -200,7 +200,9 @@ def gen_table(tree: Node):
 
 def main():
     tokens = lexer.tokenize(TEXT)
-    derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
+    derivation_tree = top_down_parse(tokens, 'Grammar',
+                                     ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'],
+                                     TABLE)
     table = gen_table(derivation_tree)
     res_table = dict()
     for key, value in table.items():
