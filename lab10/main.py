@@ -4,13 +4,15 @@ import lexer
 from parser import *
 
 TEXT = """
-2 + 3
+(2 + 3) * 4
 """
 
 TABLE = {'E': {'LCB': ['T', "E'"], 'NUM': ['T', "E'"]}, "E'": {'PLUS': ['PLUS', 'T', "E'"], '$': [], 'RCB': []}, 'T': {'LCB': ['F', "T'"], 'NUM': ['F', "T'"]}, "T'": {'STAR': ['STAR', 'F', "T'"], 'PLUS': [], '$': [], 'RCB': []}, 'F': {'NUM': ['NUM'], 'LCB': ['LCB', 'E', 'RCB']}}
 
 
 def dfs(root: Node):
+    if root.attr is not None and root.attr in '()':
+        return None
     if root.attr is not None and root.attr != '':
         return [root.attr]
     attrs = list()
@@ -19,9 +21,8 @@ def dfs(root: Node):
         if tmp is not None:
             for el in tmp:
                 attrs.append(el)
-    print(attrs)
     if len(attrs) == 3:
-        return calc(*attrs)
+        return [calc(*attrs)]
     return attrs
 
 
@@ -34,15 +35,15 @@ def calc(lhs, op, rhs):
 
 
 def calc_expr(derivation_tree: Node):
-    return dfs(derivation_tree)
+    return dfs(derivation_tree)[0]
 
 
 def main():
     tokens = lexer.tokenize(TEXT)
     derivation_tree = top_down_parse(tokens, 'E', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
-    print(get_dot(derivation_tree))
-    print()
-    print()
+    # print(get_dot(derivation_tree))
+    # print()
+    # print()
     print(calc_expr(derivation_tree))
 
 
