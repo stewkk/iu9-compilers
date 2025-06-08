@@ -9,7 +9,7 @@ TEXT = """
 [GRAMMAR [AXIOM RULES]]
 [AXIOM [lb "axiom" lb NT rb rb]]
 [RULES [RULE RULES] []]
-[RULE [lb NT RHS rb] [lb rb]]
+[RULE [lb NT RHS rb]]
 [NT [nonterm]]
 [RHS [PRODUCTIONS RHSTAIL]]
 [RHSTAIL [PRODUCTIONS RHSTAIL] []]
@@ -202,24 +202,20 @@ def gen_table(tree: Node):
         lhs = rule[0]
         table[lhs] = dict()
 
-    for rule in RULES:
+    for i, rule in enumerate(RULES):
         lhs = rule[0]
         for rhs in rule[1]:
             f = first(rhs)
             for a in f:
                 if a == 'ε':
                     continue
-                if a not in table[lhs]:
-                    table[lhs][a] = list()
-                if rhs in table[lhs][a]:
-                    raise Exception("")
+                if a in table[lhs]:
+                    raise Exception(f"grammar is not ll(1): {RULES_TOKENS[i][0]} is ambigious")
                 table[lhs][a] = rhs
             if 'ε' in f:
                 for b in follow[lhs]:
-                    if b not in table[lhs]:
-                        table[lhs][b] = list()
-                    if rhs in table[lhs][b]:
-                        raise Exception("alarm")
+                    if b in table[lhs]:
+                        raise Exception("grammar is not ll(1)")
                     table[lhs][b] = rhs
     return table
 
