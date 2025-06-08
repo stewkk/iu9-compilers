@@ -10,29 +10,11 @@ import copy
 
 
 TEXT = """
-% аксиома
-[axiom [E]]
-% правила грамматики
-[E    [T E']]
-[E'   [plus T E'] []]
-[T    [F T']]
-[T'   [star F T'] []]
-[F    [number] [lcb E rcb]]
+2 + 3
 """
 
-TABLE = {
-    'Grammar': {'LB': ['Axiom', 'Rules']},
-    'Axiom': {'LB': ['LB', 'AXIOM', 'LB', 'Nt', 'RB', 'RB']},
-    'Rules': {'LB': ['Rule', 'Rules'], '$': []},
-    'Rule': {'LB': ['LB', 'Nt', 'Rhs', 'RB']},
-    'Nt': {'NONTERM': ['NONTERM']},
-    'Rhs': {'LB': ['Productions', 'RhsTail']},
-    'RhsTail': {'LB': ['Productions', 'RhsTail'], 'RB': []},
-    'Productions': {'LB': ['LB', 'ProductionsBody', 'RB']},
-    'ProductionsBody': {'NONTERM': ['NONTERM', 'ProductionsBody'],
-                        'TERM': ['TERM', 'ProductionsBody'],
-                        'RB': []},
-}
+TABLE = {'E': {'LCB': ['T', "E'"], 'NUM': ['T', "E'"]}, "E'": {'PLUS': ['PLUS', 'T', "E'"], '$': [], 'RCB': []}, 'T': {'LCB': ['F', "T'"], 'NUM': ['F', "T'"]}, "T'": {'STAR': ['STAR', 'F', "T'"], 'PLUS': [], '$': [], 'RCB': []}, 'F': {'NUM': ['NUM'], 'LCB': ['LCB', 'E', 'RCB']}}
+
 
 
 @dataclass
@@ -263,28 +245,28 @@ def gen_table(tree: Node):
 
 def main():
     tokens = lexer.tokenize(TEXT)
-    derivation_tree = top_down_parse(tokens, 'Grammar', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
-    # print(get_dot(derivation_tree))
-    table = gen_table(derivation_tree)
-    res_table = dict()
-    for key, value in table.items():
-        key = key[0]+key[1:].lower()
-        res_table[key] = dict()
-        for inner, inner_value in value.items():
-            inner_array = copy.deepcopy(inner_value)
-            inner_key = inner.upper()
-            res = list()
-            for el in inner_array:
-                if el[0] == '"':
-                    res.append(el[1:-1].upper())
-                elif el.islower():
-                    res.append(el.upper())
-                else:
-                    res.append(el[0]+el[1:].lower())
-            res_table[key][inner_key] = res
+    derivation_tree = top_down_parse(tokens, 'E', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
+    print(get_dot(derivation_tree))
+    # table = gen_table(derivation_tree)
+    # res_table = dict()
+    # for key, value in table.items():
+    #     key = key[0]+key[1:].lower()
+    #     res_table[key] = dict()
+    #     for inner, inner_value in value.items():
+    #         inner_array = copy.deepcopy(inner_value)
+    #         inner_key = inner.upper()
+    #         res = list()
+    #         for el in inner_array:
+    #             if el[0] == '"':
+    #                 res.append(el[1:-1].upper())
+    #             elif el.islower():
+    #                 res.append(el.upper())
+    #             else:
+    #                 res.append(el[0]+el[1:].lower())
+    #         res_table[key][inner_key] = res
 
-    print()
-    print(res_table)
+    # print()
+    # print(res_table)
 
 
 if __name__ == "__main__":
