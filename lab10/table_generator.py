@@ -9,7 +9,7 @@ TEXT = """
 [GRAMMAR [AXIOM RULES]]
 [AXIOM [lb "axiom" lb NT rb rb]]
 [RULES [RULE RULES] []]
-[RULE [lb NT RHS rb]]
+[RULE [lb NT RHS rb] [lb rb]]
 [NT [nonterm]]
 [RHS [PRODUCTIONS RHSTAIL]]
 [RHSTAIL [PRODUCTIONS RHSTAIL] []]
@@ -50,10 +50,13 @@ def handle_rule(root: Node) -> None:
     lhs = get_child(lhs, "NONTERM")
     assert lhs is not None
 
+    lhs_token = lhs.children[0].name
     lhs = lhs.children[0].attr
 
     global RULES
+    global RULES_TOKENS
     res_rhs = list()
+    res_rhs_tokens = list()
 
     rhs = get_child(root, "Rhs")
     while rhs is not None and rhs.children[0].attr != "":
@@ -62,20 +65,25 @@ def handle_rule(root: Node) -> None:
         productions = get_child(productions, "Productionsbody")
 
         res_productions = list()
+        res_tokens = list()
 
         while productions is not None and productions.children[0].attr != "":
             term = get_child(productions, "TERM")
             nonterm = get_child(productions, "NONTERM")
             if term is not None:
                 res_productions.append(term.children[0].attr)
+                res_tokens.append(term.children[0].name)
             if nonterm is not None:
                 res_productions.append(nonterm.children[0].attr)
+                res_tokens.append(nonterm.children[0].name)
             productions = get_child(productions, "Productionsbody")
 
         res_rhs.append(res_productions)
+        res_rhs_tokens.append(res_tokens)
 
         rhs = get_child(rhs, "Rhstail")
 
+    RULES_TOKENS.append((lhs_token, res_rhs_tokens))
     RULES.append((lhs, res_rhs))
 
 
@@ -85,6 +93,7 @@ ACTIONS = {
 }
 AXIOM = None
 RULES = list()
+RULES_TOKENS = list()
 FIRST = dict()
 
 
@@ -160,11 +169,28 @@ def calc_first():
                 FIRST[lhs] = FIRST[lhs].union(first(rhs))
 
 
+def check_rules():
+    lhs_parts = list()
+    for rule in RULES:
+        lhs = rule[0]
+        lhs_parts.append(lhs)
+    for i, rule in enumerate(RULES):
+        lhs = rule[0]
+        for j, rhs in enumerate(rule[1]):
+            for k, el in enumerate(rhs):
+                if is_nonterm(el) and el not in lhs_parts:
+                    token = RULES_TOKENS[i][1][j][k]
+                    raise Exception(f'nonterminal {token} should be lhs of exactly one rule')
+
+
+
 def gen_table(tree: Node):
     dfs(tree)
     print(AXIOM)
     print(RULES)
     table = dict()
+
+    check_rules()
 
     calc_first()
 
@@ -196,6 +222,7 @@ def gen_table(tree: Node):
                         raise Exception("alarm")
                     table[lhs][b] = rhs
     return table
+
 
 def main():
     tokens = lexer.tokenize(TEXT)
