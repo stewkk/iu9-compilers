@@ -246,6 +246,8 @@ def main():
 
     print()
     print(res_table)
+    with open("table.py", "w") as f:
+        print("TABLE =", res_table, file=f)
 
 
 if __name__ == "__main__":
