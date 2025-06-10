@@ -11,13 +11,29 @@ import sys
 
 
 class DefinitionBase(abc.ABC):
-    pass
+    @abc.abstractmethod
+    def check(self, position, prev, is_top_level):
+        pass
+
+    @abc.abstractmethod
+    def type(self):
+        return ""
 
 
 # Definition -> Struct | Enum | Union
 @dataclass
 class Definition:
     data: DefinitionBase
+    position: pe.Position
+
+    @pe.ExAction
+    def create(attrs, coords, _):
+        attr = attrs[0]
+        coord = coords[0].start
+        return Definition(attr, coord)
+
+    def check(self, prev_definitions, is_top_level):
+        self.data.check(self.position, prev_definitions, is_top_level)
 
 
 # NumType -> INT | DOUBLE | FLOAT | CHAR | SHORT | LONG
@@ -36,6 +52,9 @@ class NumVariablesDefinition:
     pointer_level: int
     name_dimension: list[tuple[str, list[str|int]]]
 
+    def check(self, prev, is_top_level):
+        pass
+
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
 @dataclass
@@ -45,6 +64,19 @@ class Struct(DefinitionBase):
     pointer_level: int
     variables: list[str]
 
+    def check(self, position, prev, is_top_level):
+        # print(self.name, prev, is_top_level)
+        if is_top_level:
+            for field in self.fields:
+                field.check(prev, False)
+            return
+        if f'struct {self.name}' not in prev and self.pointer_level == 0 and self.name:
+            raise Exception(f'struct {self.name} at {position} is undefined')
+
+    def type(self):
+        if not self.name:
+            return ''
+        return f'struct {self.name}'
 
 # Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr )
 class Expr(abc.ABC):
@@ -104,6 +136,14 @@ class Union(DefinitionBase):
 class Program:
     definitions: list[Definition]
 
+    def check(self):
+        defined = list()
+        for i, d in enumerate(self.definitions):
+            d.check(defined, True)
+            type = d.data.type()
+            if type != '':
+                defined.append(d.data.type())
+
 
 INTEGER = pe.Terminal('INTEGER', '[0-9]+', int, priority=7)
 VARNAME = pe.Terminal('VARNAME', '[A-Za-z][A-Za-z0-9_]*', str)
@@ -147,9 +187,9 @@ NDefinitions |= NDefinition, NDefinitions, lambda d, p: [d]+p
 NDefinitions |= lambda: []
 
 # Definition -> Struct | Enum | Union
-NDefinition |= NStruct
-NDefinition |= NEnum
-NDefinition |= NUnion
+NDefinition |= NStruct, Definition.create
+NDefinition |= NEnum, Definition.create
+NDefinition |= NUnion, Definition.create
 
 # DefinitionOrVariable -> Definition | NumVar
 NDefinitionOrVariable |= NDefinition
@@ -264,3 +304,4 @@ for filename in sys.argv[1:]:
     with open(filename) as f:
         tree = p.parse_earley(f.read())
         pprint(tree)
+        tree.check()

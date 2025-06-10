@@ -3,6 +3,7 @@ import collections
 import dataclasses
 import re
 import sys
+from pprint import pprint
 
 
 __all__ = '''
@@ -1333,13 +1334,13 @@ class EarleyParser:
                             and state.is_complete()
                             and state.start == 0)]
 
-        if len(final_states) > 1:
-            raise ParseError(pos=Position(),
-                             expected="",
-                             unexpected="",
-                             _text=f"Неопределенная грамматика: найдено {len(final_states)} путей разбора")
+        # if len(final_states) > 1:
+        #     raise ParseError(pos=Position(),
+        #                      expected="",
+        #                      unexpected="",
+        #                      _text=f"Неопределенная грамматика: найдено {len(final_states)} путей разбора")
         if final_states:
-            return final_states[0].attrs[0]
+            return final_states[-1].attrs[0]
 
     def print_chart(self):
         for pos, states in sorted(self.chart.items()):
