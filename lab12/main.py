@@ -60,15 +60,18 @@ class NumVariablesDefinition:
 @dataclass
 class Struct(DefinitionBase):
     name: str|None
-    fields: list[Definition|NumVariablesDefinition]
+    fields: list[Definition|NumVariablesDefinition]|None
     pointer_level: int
     variables: list[str]
 
     def check(self, position, prev, is_top_level):
         # print(self.name, prev, is_top_level)
+        if self.fields is not None and f'struct {self.name}' in prev:
+            raise Exception(f'redefinition of struct {self.name} at {position}')
         if is_top_level:
-            for field in self.fields:
-                field.check(prev, False)
+            if self.fields is not None:
+                for field in self.fields:
+                    field.check(prev, False)
             return
         if f'struct {self.name}' not in prev and self.pointer_level == 0 and self.name:
             raise Exception(f'struct {self.name} at {position} is undefined')
@@ -77,6 +80,7 @@ class Struct(DefinitionBase):
         if not self.name:
             return ''
         return f'struct {self.name}'
+
 
 # Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr )
 class Expr(abc.ABC):
@@ -121,14 +125,39 @@ class Enum(DefinitionBase):
     pointer_level: int
     variables: list[str]
 
+    def check(self, position, prev, _):
+        if self.fields is not None and f'enum {self.name}' in prev:
+            raise Exception(f'redefinition of enum {self.name} at {position}')
+
+    def type(self):
+        if not self.name:
+            return ''
+        return f'struct {self.name}'
+
 
 # Union -> UNION NameOpt UnionFieldsOpt PointerOpt VariablesOpt ;
 @dataclass
 class Union(DefinitionBase):
     name: str|None
-    fields: list[Definition|NumVariablesDefinition]
+    fields: list[Definition|NumVariablesDefinition]|None
     pointer_level: int
     variables: list[str]
+
+    def check(self, position, prev, is_top_level):
+        if self.fields is not None and f'union {self.name}' in prev:
+            raise Exception(f'redefinition of union {self.name} at {position}')
+        if is_top_level:
+            if self.fields is not None:
+                for field in self.fields:
+                    field.check(prev, False)
+            return
+        if f'union {self.name}' not in prev and self.pointer_level == 0 and self.name:
+            raise Exception(f'union {self.name} at {position} is undefined')
+
+    def type(self):
+        if not self.name:
+            return ''
+        return f'union {self.name}'
 
 
 # Program -> Definition Program | Definition
@@ -210,7 +239,8 @@ NNumType |= KW_SHORT, lambda: Type.SHORT
 NNumType |= KW_LONG, lambda: Type.LONG
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
-NStruct |= KW_STRUCT, NNameOpt, NStructFieldsOpt, NPointerOpt, NVariablesOpt, ';', Struct
+NStruct |= KW_STRUCT, NNameOpt, NStructFields, NPointerOpt, NVariablesOpt, ';', Struct
+NStruct |= KW_STRUCT, VARNAME, NStructFieldsOpt, NPointerOpt, NVariablesOpt, ';', Struct
 
 # NameOpt -> NAME | ε
 NNameOpt |= VARNAME
@@ -222,7 +252,7 @@ NVariablesOpt |= lambda: []
 
 # StructFieldsOpt -> StructFields | ε
 NStructFieldsOpt |= NStructFields
-NStructFieldsOpt |= lambda: []
+NStructFieldsOpt |= lambda: None
 
 # StructFields -> { DefinitionsOrVariables }
 NStructFields |= '{', NDefinitionsOrVariables, '}'
@@ -286,7 +316,8 @@ NSizeOf |= VARNAME
 NSizeOf |= NNumType
 
 # Union -> UNION NameOpt UnionFieldsOpt PointerOpt VariablesOpt ;
-NUnion |= KW_UNION, NNameOpt, NUnionFieldsOpt, NPointerOpt, NVariablesOpt, ';', Union
+NUnion |= KW_UNION, VARNAME, NUnionFieldsOpt, NPointerOpt, NVariablesOpt, ';', Union
+NUnion |= KW_UNION, NNameOpt, NUnionFields, NPointerOpt, NVariablesOpt, ';', Union
 
 # UnionFieldsOpt -> UnionFields | ε
 NUnionFieldsOpt |= NUnionFields

@@ -1305,6 +1305,10 @@ class EarleyParser:
                         elif isinstance(next_sym, NonTerminal):
                             expected_set.update(self.grammar.first_set([next_sym]) - {None})
                 expected_list = list(expected_set)
+
+                print(tokens[pos-1].pos.start,
+                tokens[pos-1],
+                expected_list)
                 raise ParseError(tokens[pos-1].pos.start,
                                  unexpected=tokens[pos-1],
                                  expected=expected_list)
