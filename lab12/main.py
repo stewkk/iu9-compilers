@@ -9,6 +9,7 @@ import parser_edsl as pe
 import re
 from pprint import pprint
 import sys
+import itertools
 
 
 @dataclass
@@ -77,6 +78,18 @@ class Struct(DefinitionBase):
         prev, is_top_level, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'struct {self.name}' in prev:
             raise Exception(f'redefinition of struct {self.name} at {position}')
+
+        def get_vars(field):
+            if isinstance(field, Definition):
+                return field.variables
+            return [var[0] for var in field.name_dimension]
+
+
+        if self.fields is not None:
+            field_names = list(itertools.chain(*[get_vars(field) for field in self.fields]))
+            if sorted(field_names) != sorted(list(set(field_names))):
+                raise Exception(f'duplicate field name')
+
         if is_top_level:
             if self.fields is not None:
                 for field in self.fields:
