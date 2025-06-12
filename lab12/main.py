@@ -141,7 +141,7 @@ def check(obj, ctx, type, size_strategy):
     for variable in obj.variables:
         variable.calc_size(ctx, obj.size)
 
-    if not is_top_level and f'{type} {obj.name}' not in prev and self.pointer_level == 0 and self.name:
+    if not is_top_level and f'{type} {obj.name}' not in prev and obj.pointer_level == 0 and obj.name:
         raise Exception(f'{type} {obj.name} at {position} is undefined')
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
@@ -291,29 +291,7 @@ class Union(DefinitionBase):
     size: int|None = None
 
     def check(self, ctx: SemanticContext):
-        prev, is_top_level, position = dataclasses.astuple(ctx)
-        if self.fields is not None and f'union {self.name}' in prev:
-            raise Exception(f'redefinition of union {self.name} at {position}')
-
-        def get_vars(field):
-            if isinstance(field, Definition):
-                return [var.name for var in field.data.variables]
-            return [var.name for var in field.variables]
-
-
-        if self.fields is not None:
-            field_names = list(itertools.chain(*[get_vars(field) for field in self.fields]))
-            if sorted(field_names) != sorted(list(set(field_names))):
-                raise Exception(f'duplicate field name')
-
-        if is_top_level:
-            if self.fields is not None:
-                for field in self.fields:
-                    field.check(dataclasses.replace(ctx, is_top_level=False))
-            return
-
-        if f'union {self.name}' not in prev and self.pointer_level == 0 and self.name:
-            raise Exception(f'union {self.name} at {position} is undefined')
+        check(self, ctx, 'union', max)
 
     def type(self):
         if not self.name:
