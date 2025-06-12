@@ -68,6 +68,12 @@ class Variable:
     dimensions: list[Expr]
     size: int|None = None
 
+    def calc_size(self, ctx: SemanticContext, type_size: int):
+        size = type_size
+        for dimension in self.dimensions:
+            size *= dimension.calc(ctx)
+        self.size = size
+
 
 @dataclass
 class NumVariablesDefinition:
@@ -94,10 +100,7 @@ class NumVariablesDefinition:
                 case Type.LONG:
                     type_size = 8
         for variable in self.variables:
-            size = type_size
-            for dimension in variable.dimensions:
-                size *= dimension.calc(ctx)
-            variable.size = size
+            variable.calc_size(ctx, type_size)
 
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
@@ -114,23 +117,37 @@ class Struct(DefinitionBase):
         if self.fields is not None and f'struct {self.name}' in prev:
             raise Exception(f'redefinition of struct {self.name} at {position}')
 
+        def get_var_names(field):
+            return [var.name for var in get_vars(field)]
+
         def get_vars(field):
             if isinstance(field, Definition):
-                return [var.name for var in field.data.variables]
-            return [var.name for var in field.variables]
-
+                return [var for var in field.data.variables]
+            return [var for var in field.variables]
 
         if self.fields is not None:
-            field_names = list(itertools.chain(*[get_vars(field) for field in self.fields]))
+            field_names = list(itertools.chain(*[get_var_names(field) for field in self.fields]))
             if sorted(field_names) != sorted(list(set(field_names))):
                 raise Exception(f'duplicate field name')
 
-        if is_top_level:
-            if self.fields is not None:
-                for field in self.fields:
-                    field.check(dataclasses.replace(ctx, is_top_level=False))
-            return
-        if f'struct {self.name}' not in prev and self.pointer_level == 0 and self.name:
+        if self.fields is not None:
+            self.size = 0
+            for field in self.fields:
+                field.check(dataclasses.replace(ctx, is_top_level=False))
+                self.size += sum([var.size for var in get_vars(field)])
+        else:
+            if self.type() not in ctx.type_to_size:
+                raise Exception(f'struct {self.name} at {position} is undefined')
+            self.size = ctx.type_to_size[self.type()]
+
+        t = self.type()
+        if t and is_top_level:
+            ctx.type_to_size[t] = self.size
+
+        for variable in self.variables:
+            variable.calc_size(ctx, self.size)
+
+        if not is_top_level and f'struct {self.name}' not in prev and self.pointer_level == 0 and self.name:
             raise Exception(f'struct {self.name} at {position} is undefined')
 
     def type(self):
@@ -190,7 +207,6 @@ class UnOpExpr(Expr):
                 return -inner
             case "sizeof":
                 raise Exception("TODO: unimplemented")
-
 
 
 # EnumField -> NAME EnumFieldRhsOpt
