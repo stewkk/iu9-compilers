@@ -130,19 +130,22 @@ class Struct(DefinitionBase):
             if sorted(field_names) != sorted(list(set(field_names))):
                 raise Exception(f'duplicate field name')
 
-        if self.fields is not None:
+        if self.pointer_level > 0:
+            self.size = 4
+        elif self.fields is not None:
             self.size = 0
             for field in self.fields:
                 field.check(dataclasses.replace(ctx, is_top_level=False))
                 self.size += sum([var.size for var in get_vars(field)])
+
+            t = self.type()
+            if t and is_top_level:
+                ctx.type_to_size[t] = self.size
         else:
             if self.type() not in ctx.type_to_size:
                 raise Exception(f'struct {self.name} at {position} is undefined')
             self.size = ctx.type_to_size[self.type()]
 
-        t = self.type()
-        if t and is_top_level:
-            ctx.type_to_size[t] = self.size
 
         for variable in self.variables:
             variable.calc_size(ctx, self.size)
@@ -199,13 +202,35 @@ class UnOpExpr(Expr):
     expr: Expr
 
     def calc(self, ctx: SemanticContext) -> int:
-        inner = self.expr.calc(ctx)
         match self.op:
             case "+":
+                inner = self.expr.calc(ctx)
                 return inner
             case "-":
+                inner = self.expr.calc(ctx)
                 return -inner
             case "sizeof":
+                match self.expr:
+                    case Type.INT:
+                        return 4
+                    case Type.DOUBLE:
+                        return 8
+                    case Type.FLOAT:
+                        return 8
+                    case Type.CHAR:
+                        return 1
+                    case Type.SHORT:
+                        return 2
+                    case Type.LONG:
+                        return 8
+                    case ExprNumber(e):
+                        return e
+                    case str(t):
+                        if t in ctx.type_to_size:
+                            return ctx.type_to_size[t]
+                        if t in ctx.enum_variabels:
+                            return 4
+
                 raise Exception("TODO: unimplemented")
 
 
@@ -442,13 +467,13 @@ NAddOp |= '+', lambda: '+'
 NAddOp |= '-', lambda: '-'
 NFactor |= INTEGER, lambda v: ExprNumber(int(v))
 NFactor |= '(', NExpr, ')'
-NFactor |= KW_SIZEOF, '(', NSizeOf, ')', lambda inner: UnOpExpr('sizeof', ExprName(inner))
+NFactor |= KW_SIZEOF, '(', NSizeOf, ')', lambda inner: UnOpExpr('sizeof', inner)
 NFactor |= VARNAME, ExprName
 NSizeOf |= KW_ENUM, VARNAME, lambda y: 'enum '+y
 NSizeOf |= KW_UNION, VARNAME, lambda y: 'union '+y
 NSizeOf |= KW_STRUCT, VARNAME, lambda y: 'struct '+y
-NSizeOf |= VARNAME
 NSizeOf |= NNumType
+NSizeOf |= VARNAME
 
 # Union -> UNION NameOpt UnionFieldsOpt PointerOpt VariablesOpt ;
 NUnion |= KW_UNION, VARNAME, NUnionFieldsOpt, NPointerOpt, NVariablesOpt, ';', Union
@@ -474,5 +499,6 @@ for filename in sys.argv[1:]:
             pprint(tree)
         except Exception as e:
             print(f'Ошибка: {e}')
+            raise e
         else:
             print('Программа корректна')
