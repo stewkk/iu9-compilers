@@ -81,7 +81,7 @@ class Struct(DefinitionBase):
 
         def get_vars(field):
             if isinstance(field, Definition):
-                return field.variables
+                return [var[0] for var in field.data.variables]
             return [var[0] for var in field.name_dimension]
 
 
@@ -106,17 +106,25 @@ class Struct(DefinitionBase):
 
 # Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr )
 class Expr(abc.ABC):
-    pass
+    @abc.abstractmethod
+    def calc(self, ctx: SemanticContext) -> int:
+        pass
 
 
 @dataclass
 class ExprNumber(Expr):
     number: int
 
+    def calc(self, ctx: SemanticContext) -> int:
+        return self.number
+
 
 @dataclass
 class ExprName(Expr):
     name: str
+
+    def calc(self, ctx: SemanticContext) -> int:
+        return ctx.enum_variabels[self.name][0]
 
 
 @dataclass
@@ -125,11 +133,35 @@ class BinOpExpr(Expr):
     op: str
     rhs: Expr
 
+    def calc(self, ctx: SemanticContext) -> int:
+        lhs = self.lhs.calc(ctx)
+        rhs = self.rhs.calc(ctx)
+        match self.op:
+            case "+":
+                return lhs + rhs
+            case "-":
+                return lhs - rhs
+            case "*":
+                return lhs * rhs
+            case "/":
+                return lhs // rhs
+
 
 @dataclass
 class UnOpExpr(Expr):
     op: str
     expr: Expr
+
+    def calc(self, ctx: SemanticContext) -> int:
+        inner = self.expr.calc(ctx)
+        match self.op:
+            case "+":
+                return inner
+            case "-":
+                return -inner
+            case "sizeof":
+                raise Exception("TODO: unimplemented")
+
 
 
 # EnumField -> NAME EnumFieldRhsOpt
@@ -138,6 +170,7 @@ class EnumField:
     name: str
     rhs: Expr|None
     position: pe.Position
+    value: int|None = None
 
     @pe.ExAction
     def create(attrs, coords, _):
@@ -146,10 +179,13 @@ class EnumField:
             return EnumField(attrs[0], None, coord)
         return EnumField(*attrs, coord)
 
-    def check(self, ctx: SemanticContext):
+    def check(self, ctx: SemanticContext, index: int):
         if self.name in ctx.enum_variabels:
             raise Exception(f'{self.name} redefined')
-        ctx.enum_variabels[self.name] = self.position
+
+        self.value = self.rhs.calc(ctx) if self.rhs is not None else index
+        ctx.enum_variabels[self.name] = (self.value, self.position)
+
 
 
 # Enum -> ENUM NameOpt EnumFieldsOpt PointerOpt VariablesOpt ;
@@ -164,8 +200,8 @@ class Enum(DefinitionBase):
         prev, _, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'enum {self.name}' in prev:
             raise Exception(f'redefinition of enum {self.name} at {position}')
-        for field in self.fields:
-            field.check(ctx)
+        for i, field in enumerate(self.fields):
+            field.check(ctx, i)
 
     def type(self):
         if not self.name:
@@ -185,11 +221,24 @@ class Union(DefinitionBase):
         prev, is_top_level, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'union {self.name}' in prev:
             raise Exception(f'redefinition of union {self.name} at {position}')
+
+        def get_vars(field):
+            if isinstance(field, Definition):
+                return [var[0] for var in field.data.variables]
+            return [var[0] for var in field.name_dimension]
+
+
+        if self.fields is not None:
+            field_names = list(itertools.chain(*[get_vars(field) for field in self.fields]))
+            if sorted(field_names) != sorted(list(set(field_names))):
+                raise Exception(f'duplicate field name')
+
         if is_top_level:
             if self.fields is not None:
                 for field in self.fields:
                     field.check(dataclasses.replace(ctx, is_top_level=False))
             return
+
         if f'union {self.name}' not in prev and self.pointer_level == 0 and self.name:
             raise Exception(f'union {self.name} at {position} is undefined')
 
@@ -372,6 +421,11 @@ p.add_skipped_domain(r"(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)")
 
 for filename in sys.argv[1:]:
     with open(filename) as f:
-        tree = p.parse_earley(f.read())
-        pprint(tree)
-        tree.check()
+        try:
+            tree = p.parse_earley(f.read())
+            tree.check()
+            pprint(tree)
+        except Exception as e:
+            print(f'Ошибка: {e}')
+        else:
+            print('Программа корректна')
