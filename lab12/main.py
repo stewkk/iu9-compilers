@@ -16,6 +16,7 @@ class SemanticContext:
     definitions: list[str]
     is_top_level: bool
     position: pe.Position|None
+    enum_variabels = dict()
 
 
 class DefinitionBase(abc.ABC):
@@ -123,9 +124,19 @@ class UnOpExpr(Expr):
 class EnumField:
     name: str
     rhs: Expr|None
+    position: pe.Position
+
+    @pe.ExAction
+    def create(attrs, coords, _):
+        coord = coords[0].start
+        if len(attrs) == 1:
+            return EnumField(attrs[0], None, coord)
+        return EnumField(*attrs, coord)
 
     def check(self, ctx: SemanticContext):
-        pass
+        if self.name in ctx.enum_variabels:
+            raise Exception(f'{self.name} redefined')
+        ctx.enum_variabels[self.name] = self.position
 
 
 # Enum -> ENUM NameOpt EnumFieldsOpt PointerOpt VariablesOpt ;
@@ -306,8 +317,8 @@ NEnumFieldsTail |= ',', NEnumField, NEnumFieldsTail, lambda f, t: [f]+t
 NEnumFieldsTail |= lambda: []
 
 # EnumField -> NAME EnumFieldRhsOpt
-NEnumField |= VARNAME, '=', NExpr, EnumField
-NEnumField |= VARNAME, lambda name: EnumField(name, None)
+NEnumField |= VARNAME, '=', NExpr, EnumField.create
+NEnumField |= VARNAME, EnumField.create
 
 # Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( VARNAME ) | - Expr | ( Expr )
 NExpr |= NTerm
