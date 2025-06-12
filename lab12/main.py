@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import abc
+import dataclasses
 import enum
 import typing
 from dataclasses import dataclass
@@ -10,9 +11,16 @@ from pprint import pprint
 import sys
 
 
+@dataclass
+class SemanticContext:
+    definitions: list[str]
+    is_top_level: bool
+    position: pe.Position|None
+
+
 class DefinitionBase(abc.ABC):
     @abc.abstractmethod
-    def check(self, position, prev, is_top_level):
+    def check(self, ctx: SemanticContext):
         pass
 
     @abc.abstractmethod
@@ -32,8 +40,8 @@ class Definition:
         coord = coords[0].start
         return Definition(attr, coord)
 
-    def check(self, prev_definitions, is_top_level):
-        self.data.check(self.position, prev_definitions, is_top_level)
+    def check(self, ctx: SemanticContext):
+        self.data.check(dataclasses.replace(ctx, position=self.position))
 
 
 # NumType -> INT | DOUBLE | FLOAT | CHAR | SHORT | LONG
@@ -52,7 +60,7 @@ class NumVariablesDefinition:
     pointer_level: int
     name_dimension: list[tuple[str, list[str|int]]]
 
-    def check(self, prev, is_top_level):
+    def check(self, ctx: SemanticContext):
         pass
 
 
@@ -64,14 +72,14 @@ class Struct(DefinitionBase):
     pointer_level: int
     variables: list[str]
 
-    def check(self, position, prev, is_top_level):
-        # print(self.name, prev, is_top_level)
+    def check(self, ctx: SemanticContext):
+        prev, is_top_level, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'struct {self.name}' in prev:
             raise Exception(f'redefinition of struct {self.name} at {position}')
         if is_top_level:
             if self.fields is not None:
                 for field in self.fields:
-                    field.check(prev, False)
+                    field.check(dataclasses.replace(ctx, is_top_level=False))
             return
         if f'struct {self.name}' not in prev and self.pointer_level == 0 and self.name:
             raise Exception(f'struct {self.name} at {position} is undefined')
@@ -116,6 +124,9 @@ class EnumField:
     name: str
     rhs: Expr|None
 
+    def check(self, ctx: SemanticContext):
+        pass
+
 
 # Enum -> ENUM NameOpt EnumFieldsOpt PointerOpt VariablesOpt ;
 @dataclass
@@ -125,9 +136,12 @@ class Enum(DefinitionBase):
     pointer_level: int
     variables: list[str]
 
-    def check(self, position, prev, _):
+    def check(self, ctx: SemanticContext):
+        prev, _, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'enum {self.name}' in prev:
             raise Exception(f'redefinition of enum {self.name} at {position}')
+        for field in self.fields:
+            field.check(ctx)
 
     def type(self):
         if not self.name:
@@ -143,13 +157,14 @@ class Union(DefinitionBase):
     pointer_level: int
     variables: list[str]
 
-    def check(self, position, prev, is_top_level):
+    def check(self, ctx: SemanticContext):
+        prev, is_top_level, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'union {self.name}' in prev:
             raise Exception(f'redefinition of union {self.name} at {position}')
         if is_top_level:
             if self.fields is not None:
                 for field in self.fields:
-                    field.check(prev, False)
+                    field.check(dataclasses.replace(ctx, is_top_level=False))
             return
         if f'union {self.name}' not in prev and self.pointer_level == 0 and self.name:
             raise Exception(f'union {self.name} at {position} is undefined')
@@ -168,7 +183,7 @@ class Program:
     def check(self):
         defined = list()
         for i, d in enumerate(self.definitions):
-            d.check(defined, True)
+            d.check(SemanticContext(defined, True, None))
             type = d.data.type()
             if type != '':
                 defined.append(d.data.type())
