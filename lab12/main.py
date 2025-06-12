@@ -103,6 +103,47 @@ class NumVariablesDefinition:
             variable.calc_size(ctx, type_size)
 
 
+def check(obj, ctx, type, size_strategy):
+    prev, is_top_level, position = dataclasses.astuple(ctx)
+    if obj.fields is not None and f'{type} {obj.name}' in prev:
+        raise Exception(f'redefinition of {type} {obj.name} at {position}')
+
+    def get_var_names(field):
+        return [var.name for var in get_vars(field)]
+
+    def get_vars(field):
+        if isinstance(field, Definition):
+            return [var for var in field.data.variables]
+        return [var for var in field.variables]
+
+    if obj.fields is not None:
+        field_names = list(itertools.chain(*[get_var_names(field) for field in obj.fields]))
+        if sorted(field_names) != sorted(list(set(field_names))):
+            raise Exception(f'duplicate field name')
+
+    if obj.pointer_level > 0:
+        obj.size = 4
+    elif obj.fields is not None:
+        obj.size = 0
+        for field in obj.fields:
+            field.check(dataclasses.replace(ctx, is_top_level=False))
+            obj.size = size_strategy(obj.size, size_strategy(*[var.size for var in get_vars(field)]))
+
+        t = obj.type()
+        if t and is_top_level:
+            ctx.type_to_size[t] = obj.size
+    else:
+        if obj.type() not in ctx.type_to_size:
+            raise Exception(f'{type} {obj.name} at {position} is undefined')
+        obj.size = ctx.type_to_size[obj.type()]
+
+
+    for variable in obj.variables:
+        variable.calc_size(ctx, obj.size)
+
+    if not is_top_level and f'{type} {obj.name}' not in prev and self.pointer_level == 0 and self.name:
+        raise Exception(f'{type} {obj.name} at {position} is undefined')
+
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
 @dataclass
 class Struct(DefinitionBase):
@@ -113,45 +154,7 @@ class Struct(DefinitionBase):
     size: int|None = None
 
     def check(self, ctx: SemanticContext):
-        prev, is_top_level, position = dataclasses.astuple(ctx)
-        if self.fields is not None and f'struct {self.name}' in prev:
-            raise Exception(f'redefinition of struct {self.name} at {position}')
-
-        def get_var_names(field):
-            return [var.name for var in get_vars(field)]
-
-        def get_vars(field):
-            if isinstance(field, Definition):
-                return [var for var in field.data.variables]
-            return [var for var in field.variables]
-
-        if self.fields is not None:
-            field_names = list(itertools.chain(*[get_var_names(field) for field in self.fields]))
-            if sorted(field_names) != sorted(list(set(field_names))):
-                raise Exception(f'duplicate field name')
-
-        if self.pointer_level > 0:
-            self.size = 4
-        elif self.fields is not None:
-            self.size = 0
-            for field in self.fields:
-                field.check(dataclasses.replace(ctx, is_top_level=False))
-                self.size += sum([var.size for var in get_vars(field)])
-
-            t = self.type()
-            if t and is_top_level:
-                ctx.type_to_size[t] = self.size
-        else:
-            if self.type() not in ctx.type_to_size:
-                raise Exception(f'struct {self.name} at {position} is undefined')
-            self.size = ctx.type_to_size[self.type()]
-
-
-        for variable in self.variables:
-            variable.calc_size(ctx, self.size)
-
-        if not is_top_level and f'struct {self.name}' not in prev and self.pointer_level == 0 and self.name:
-            raise Exception(f'struct {self.name} at {position} is undefined')
+        check(self, ctx, 'struct', lambda *args: sum(args))
 
     def type(self):
         if not self.name:
@@ -231,8 +234,6 @@ class UnOpExpr(Expr):
                         if t in ctx.enum_variabels:
                             return 4
 
-                raise Exception("TODO: unimplemented")
-
 
 # EnumField -> NAME EnumFieldRhsOpt
 @dataclass
@@ -265,7 +266,7 @@ class Enum(DefinitionBase):
     fields: list[EnumField]
     pointer_level: int
     variables: list[Variable]
-    size: int|None = None
+    size: int = 4
 
     def check(self, ctx: SemanticContext):
         prev, _, position = dataclasses.astuple(ctx)
@@ -469,7 +470,6 @@ NFactor |= INTEGER, lambda v: ExprNumber(int(v))
 NFactor |= '(', NExpr, ')'
 NFactor |= KW_SIZEOF, '(', NSizeOf, ')', lambda inner: UnOpExpr('sizeof', inner)
 NFactor |= VARNAME, ExprName
-NSizeOf |= KW_ENUM, VARNAME, lambda y: 'enum '+y
 NSizeOf |= KW_UNION, VARNAME, lambda y: 'union '+y
 NSizeOf |= KW_STRUCT, VARNAME, lambda y: 'struct '+y
 NSizeOf |= NNumType
