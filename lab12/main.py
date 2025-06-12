@@ -3,10 +3,8 @@
 import abc
 import dataclasses
 import enum
-import typing
 from dataclasses import dataclass
 import parser_edsl as pe
-import re
 from pprint import pprint
 import sys
 import itertools
@@ -18,6 +16,7 @@ class SemanticContext:
     is_top_level: bool
     position: pe.Position|None
     enum_variabels = dict()
+    type_to_size = dict()
 
 
 class DefinitionBase(abc.ABC):
@@ -56,14 +55,49 @@ class Type(enum.Enum):
     LONG = 'long'
 
 
+# Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr )
+class Expr(abc.ABC):
+    @abc.abstractmethod
+    def calc(self, ctx: SemanticContext) -> int:
+        pass
+
+
+@dataclass
+class Variable:
+    name: str
+    dimensions: list[Expr]
+    size: int|None = None
+
+
 @dataclass
 class NumVariablesDefinition:
     typename: Type
     pointer_level: int
-    name_dimension: list[tuple[str, list[str|int]]]
+    variables: list[Variable]
 
     def check(self, ctx: SemanticContext):
-        pass
+        type_size = None
+        if self.pointer_level > 0:
+            type_size = 4
+        else:
+            match self.typename:
+                case Type.INT:
+                    type_size = 4
+                case Type.DOUBLE:
+                    type_size = 8
+                case Type.FLOAT:
+                    type_size = 8
+                case Type.CHAR:
+                    type_size = 1
+                case Type.SHORT:
+                    type_size = 2
+                case Type.LONG:
+                    type_size = 8
+        for variable in self.variables:
+            size = type_size
+            for dimension in variable.dimensions:
+                size *= dimension.calc(ctx)
+            variable.size = size
 
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
@@ -72,7 +106,8 @@ class Struct(DefinitionBase):
     name: str|None
     fields: list[Definition|NumVariablesDefinition]|None
     pointer_level: int
-    variables: list[str]
+    variables: list[Variable]
+    size: int|None = None
 
     def check(self, ctx: SemanticContext):
         prev, is_top_level, position = dataclasses.astuple(ctx)
@@ -81,8 +116,8 @@ class Struct(DefinitionBase):
 
         def get_vars(field):
             if isinstance(field, Definition):
-                return [var[0] for var in field.data.variables]
-            return [var[0] for var in field.name_dimension]
+                return [var.name for var in field.data.variables]
+            return [var.name for var in field.variables]
 
 
         if self.fields is not None:
@@ -103,12 +138,6 @@ class Struct(DefinitionBase):
             return ''
         return f'struct {self.name}'
 
-
-# Expr -> NUMBER | NAME | Expr + Expr | Expr - Expr | Expr * Expr | Expr / Expr | SIZEOF ( Expr )
-class Expr(abc.ABC):
-    @abc.abstractmethod
-    def calc(self, ctx: SemanticContext) -> int:
-        pass
 
 
 @dataclass
@@ -194,7 +223,8 @@ class Enum(DefinitionBase):
     name: str|None
     fields: list[EnumField]
     pointer_level: int
-    variables: list[str]
+    variables: list[Variable]
+    size: int|None = None
 
     def check(self, ctx: SemanticContext):
         prev, _, position = dataclasses.astuple(ctx)
@@ -215,7 +245,8 @@ class Union(DefinitionBase):
     name: str|None
     fields: list[Definition|NumVariablesDefinition]|None
     pointer_level: int
-    variables: list[str]
+    variables: list[Variable]
+    size: int|None = None
 
     def check(self, ctx: SemanticContext):
         prev, is_top_level, position = dataclasses.astuple(ctx)
@@ -224,8 +255,8 @@ class Union(DefinitionBase):
 
         def get_vars(field):
             if isinstance(field, Definition):
-                return [var[0] for var in field.data.variables]
-            return [var[0] for var in field.name_dimension]
+                return [var.name for var in field.data.variables]
+            return [var.name for var in field.variables]
 
 
         if self.fields is not None:
@@ -350,8 +381,8 @@ NDefinitionsOrVariables |= NDefinitionOrVariable, NDefinitionsOrVariables, lambd
 NDefinitionsOrVariables |= lambda: []
 
 # Variables -> NAME , Variables | Variables
-NVariables |= VARNAME, NDimensions, ',', NVariables, lambda name, dimensions, arr: [(name, dimensions)]+arr
-NVariables |= VARNAME, NDimensions, lambda name, dimensions: [(name, dimensions)]
+NVariables |= VARNAME, NDimensions, ',', NVariables, lambda name, dimensions, arr: [Variable(name, dimensions)]+arr
+NVariables |= VARNAME, NDimensions, lambda name, dimensions: [Variable(name, dimensions)]
 
 NDimensions |= '[', NExpr, ']', NDimensions, lambda expr, other: [expr]+other
 NDimensions |= lambda: []
