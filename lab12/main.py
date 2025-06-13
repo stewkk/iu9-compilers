@@ -127,7 +127,7 @@ def check(obj, ctx, type, size_strategy):
         obj.size = 0
         for field in obj.fields:
             field.check(dataclasses.replace(ctx, is_top_level=False))
-            obj.size = size_strategy(obj.size, size_strategy(*[var.size for var in get_vars(field)]))
+            obj.size = size_strategy(obj.size, size_strategy(*[var.size for var in get_vars(field)], 0))
 
         t = obj.type()
         if t and is_top_level:
@@ -141,7 +141,7 @@ def check(obj, ctx, type, size_strategy):
     for variable in obj.variables:
         variable.calc_size(ctx, obj.size)
 
-    if not is_top_level and f'{type} {obj.name}' not in prev and obj.pointer_level == 0 and obj.name:
+    if not is_top_level and f'{type} {obj.name}' not in prev and obj.pointer_level == 0 and obj.name and obj.fields is None:
         raise Exception(f'{type} {obj.name} at {position} is undefined')
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
@@ -274,6 +274,9 @@ class Enum(DefinitionBase):
             raise Exception(f'redefinition of enum {self.name} at {position}')
         for i, field in enumerate(self.fields):
             field.check(ctx, i)
+
+        for variable in self.variables:
+            variable.size = 4
 
     def type(self):
         if not self.name:
