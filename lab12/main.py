@@ -233,6 +233,7 @@ class UnOpExpr(Expr):
                             return ctx.type_to_size[t]
                         if t in ctx.enum_variabels:
                             return 4
+                        raise Exception(f'{t} is undefined')
 
 
 # EnumField -> NAME EnumFieldRhsOpt
