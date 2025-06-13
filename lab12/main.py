@@ -19,6 +19,15 @@ class SemanticContext:
     type_to_size = dict()
 
 
+class SemanticError(pe.Error):
+    def __init__(self, message, pos):
+        self.pos = pos
+        self.__message = message
+
+    def message(self) -> str:
+        return f'Ошибка {self.pos}: {self.__message}'
+
+
 class DefinitionBase(abc.ABC):
     @abc.abstractmethod
     def check(self, ctx: SemanticContext):
@@ -66,7 +75,15 @@ class Expr(abc.ABC):
 class Variable:
     name: str
     dimensions: list[Expr]
+    position: pe.Position
     size: int|None = None
+
+    @pe.ExAction
+    def create(attrs, coords, _):
+        coord = coords[0].start
+        if len(attrs) == 3:
+            return [Variable(*(attrs[:2]), coord)]+attrs[2]
+        return [Variable(*attrs, coord)]
 
     def calc_size(self, ctx: SemanticContext, type_size: int):
         size = type_size
@@ -106,10 +123,13 @@ class NumVariablesDefinition:
 def check(obj, ctx, type, size_strategy):
     prev, is_top_level, position = dataclasses.astuple(ctx)
     if obj.fields is not None and f'{type} {obj.name}' in prev:
-        raise Exception(f'redefinition of {type} {obj.name} at {position}')
+        raise SemanticError(f'повторное определение {type} {obj.name}', position)
 
     def get_var_names(field):
         return [var.name for var in get_vars(field)]
+
+    def get_var_positions(field):
+        return [var.position for var in get_vars(field)]
 
     def get_vars(field):
         if isinstance(field, Definition):
@@ -118,8 +138,10 @@ def check(obj, ctx, type, size_strategy):
 
     if obj.fields is not None:
         field_names = list(itertools.chain(*[get_var_names(field) for field in obj.fields]))
-        if sorted(field_names) != sorted(list(set(field_names))):
-            raise Exception(f'duplicate field name')
+        field_positions = list(itertools.chain(*[get_var_positions(field) for field in obj.fields]))
+        for i, field in enumerate(field_names):
+            if field in field_names[:i]:
+                raise SemanticError(f'поле с именем {field} уже объявлено', field_positions[i])
 
     if obj.pointer_level > 0:
         obj.size = 4
@@ -134,7 +156,7 @@ def check(obj, ctx, type, size_strategy):
             ctx.type_to_size[t] = obj.size
     else:
         if obj.type() not in ctx.type_to_size:
-            raise Exception(f'{type} {obj.name} at {position} is undefined')
+            raise SemanticError(f'{type} {obj.name} не определено', position)
         obj.size = ctx.type_to_size[obj.type()]
 
 
@@ -142,7 +164,7 @@ def check(obj, ctx, type, size_strategy):
         variable.calc_size(ctx, obj.size)
 
     if not is_top_level and f'{type} {obj.name}' not in prev and obj.pointer_level == 0 and obj.name and obj.fields is None:
-        raise Exception(f'{type} {obj.name} at {position} is undefined')
+        raise SemanticError(f'{type} {obj.name} не опредедено', position)
 
 # Struct -> STRUCT NameOpt StructFieldsOpt PointerOpt VariablesOpt ;
 @dataclass
@@ -174,6 +196,12 @@ class ExprNumber(Expr):
 @dataclass
 class ExprName(Expr):
     name: str
+    position: pe.Position
+
+    @pe.ExAction
+    def create(attrs, coords, _):
+        coord = coords[0].start
+        return ExprName(*attrs, coord)
 
     def calc(self, ctx: SemanticContext) -> int:
         return ctx.enum_variabels[self.name][0]
@@ -228,12 +256,30 @@ class UnOpExpr(Expr):
                         return 8
                     case ExprNumber(e):
                         return e
-                    case str(t):
-                        if t in ctx.type_to_size:
-                            return ctx.type_to_size[t]
-                        if t in ctx.enum_variabels:
-                            return 4
-                        raise Exception(f'{t} is undefined')
+                    case TypeStruct() | TypeUnion():
+                        if self.expr.name in ctx.type_to_size:
+                            return ctx.type_to_size[self.expr.name]
+                        raise SemanticError(f'{self.expr.name} не определено', self.expr.position)
+
+@dataclass
+class TypeUnion:
+    name: str
+    position: pe.Position
+
+    @pe.ExAction
+    def create(attrs, coords, _):
+        coord = coords[0].start
+        return TypeUnion(f'union {attrs[0]}', coord)
+
+
+class TypeStruct:
+    name: str
+    position: pe.Position
+
+    @pe.ExAction
+    def create(attrs, coords, _):
+        coord = coords[0].start
+        return TypeUnion(f'struct {attrs[0]}', coord)
 
 
 # EnumField -> NAME EnumFieldRhsOpt
@@ -253,7 +299,7 @@ class EnumField:
 
     def check(self, ctx: SemanticContext, index: int):
         if self.name in ctx.enum_variabels:
-            raise Exception(f'{self.name} redefined')
+            raise SemanticError(f'{self.name} объявлено повторно', self.position)
 
         self.value = self.rhs.calc(ctx) if self.rhs is not None else index
         ctx.enum_variabels[self.name] = (self.value, self.position)
@@ -272,7 +318,7 @@ class Enum(DefinitionBase):
     def check(self, ctx: SemanticContext):
         prev, _, position = dataclasses.astuple(ctx)
         if self.fields is not None and f'enum {self.name}' in prev:
-            raise Exception(f'redefinition of enum {self.name} at {position}')
+            raise SemanticError(f'enum {self.name} объявлено повторно', position)
         for i, field in enumerate(self.fields):
             field.check(ctx, i)
 
@@ -405,8 +451,8 @@ NDefinitionsOrVariables |= NDefinitionOrVariable, NDefinitionsOrVariables, lambd
 NDefinitionsOrVariables |= lambda: []
 
 # Variables -> NAME , Variables | Variables
-NVariables |= VARNAME, NDimensions, ',', NVariables, lambda name, dimensions, arr: [Variable(name, dimensions)]+arr
-NVariables |= VARNAME, NDimensions, lambda name, dimensions: [Variable(name, dimensions)]
+NVariables |= VARNAME, NDimensions, ',', NVariables, Variable.create
+NVariables |= VARNAME, NDimensions, Variable.create
 
 NDimensions |= '[', NExpr, ']', NDimensions, lambda expr, other: [expr]+other
 NDimensions |= lambda: []
@@ -451,11 +497,10 @@ NAddOp |= '-', lambda: '-'
 NFactor |= INTEGER, lambda v: ExprNumber(int(v))
 NFactor |= '(', NExpr, ')'
 NFactor |= KW_SIZEOF, '(', NSizeOf, ')', lambda inner: UnOpExpr('sizeof', inner)
-NFactor |= VARNAME, ExprName
-NSizeOf |= KW_UNION, VARNAME, lambda y: 'union '+y
-NSizeOf |= KW_STRUCT, VARNAME, lambda y: 'struct '+y
+NFactor |= VARNAME, ExprName.create
+NSizeOf |= KW_UNION, VARNAME, TypeUnion.create
+NSizeOf |= KW_STRUCT, VARNAME, TypeStruct.create
 NSizeOf |= NNumType
-NSizeOf |= VARNAME
 
 # Union -> UNION NameOpt UnionFieldsOpt PointerOpt VariablesOpt ;
 NUnion |= KW_UNION, VARNAME, NUnionFieldsOpt, NPointerOpt, NVariablesOpt, ';', Union
@@ -479,8 +524,9 @@ for filename in sys.argv[1:]:
             tree = p.parse_earley(f.read())
             tree.check()
             pprint(tree)
+        except SemanticError as e:
+            print(e.message())
         except Exception as e:
-            print(f'Ошибка: {e}')
             raise e
         else:
             print('Программа корректна')

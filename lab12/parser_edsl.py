@@ -498,8 +498,8 @@ def closure(gr, item_set):
 
 
 class Error(Exception, abc.ABC):
-    @abc.abstractproperty
-    def message(self):
+    @abc.abstractmethod
+    def message(self) -> str:
         pass
 
 
