@@ -98,7 +98,7 @@ $ENTRY IsVar {
     s.Type '.' e.Rest
         , <IsType s.Type>
         : True
-        , <IsIdent e.Rest> <IsNumber e.Rest>
+        , <IsIdent e.Rest> <IsDigit e.Rest>
         : e.1 True e.2
         = True;
     e.Other = False;
@@ -115,7 +115,7 @@ $ENTRY IsIdent {
 }
 
 $ENTRY IsIdentSymb {
-    s.Symb, <IsNumber s.Symb> : True = True;
+    s.Symb, <IsDigit s.Symb> : True = True;
     s.Symb, <IsAlpha s.Symb> : True = True;
     s.Symb, '_-' : e.1 s.Symb e.2 = True;
     e.Else = False;
@@ -128,6 +128,11 @@ All {
 }
 
 $ENTRY IsNumber {
+    e.Number, <All IsDigit e.Number> : True = True;
+    e.Else = False;
+}
+
+$ENTRY IsDigit {
     s.Symb
     , <Ord s.Symb>
     : {
