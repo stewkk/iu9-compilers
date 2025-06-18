@@ -1,3 +1,3 @@
 struct Coords {
-  int x, y[10];
+  int x, y[10], z;
 };

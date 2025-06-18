@@ -8,6 +8,7 @@ import parser_edsl as pe
 from pprint import pprint
 import sys
 import itertools
+import copy
 
 
 @dataclass
@@ -43,6 +44,8 @@ class DefinitionBase(abc.ABC):
 class Definition:
     data: DefinitionBase
     position: pe.Position
+    definitions: list[str] = None
+    enum_variabels: dict() = None
 
     @pe.ExAction
     def create(attrs, coords, _):
@@ -51,6 +54,8 @@ class Definition:
         return Definition(attr, coord)
 
     def check(self, ctx: SemanticContext):
+        self.definitions = ctx.definitions
+        self.enum_variabels = copy.deepcopy(ctx.enum_variabels)
         self.data.check(dataclasses.replace(ctx, position=self.position))
 
 

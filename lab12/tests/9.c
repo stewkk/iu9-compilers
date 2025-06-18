@@ -1,5 +1,5 @@
 enum {
-  BUFFER_SIZE = sizeof(union Screen),
+  BUFFER_SIZE = 100000,
   PAGE_SIZE = 4096,
   PAGES_FOR_BUFFER = (BUFFER_SIZE + PAGE_SIZE - 1) / PAGE_SIZE
 };
