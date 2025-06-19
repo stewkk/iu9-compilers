@@ -16,7 +16,7 @@ std::size_t IdentTable::GetCode(const std::string& name) {
   return code;
 }
 
-const std::string& IdentTable::At(const std::size_t code) const {
+std::string IdentTable::At(const std::size_t code) const {
   assert(code < names_.size());
   return names_.at(code);
 }

@@ -1,11 +1,16 @@
-#!/usr/bin/env python3
+% Лабораторная работа № 3.1 «Самоприменимый генератор компиляторов
+  на основе предсказывающего анализа»
+% 9 июня 2025 г.
+% Александр Старовойтов, ИУ9-61Б
 
-from parser import Node, top_down_parse
-import copy
-import lexer
-from table import TABLE
+# Цель работы
 
-TEXT = """
+Целью данной работы является изучение алгоритма построения таблиц
+предсказывающего анализатора.
+
+# Индивидуальный вариант
+
+```
 % аксиома
 [axiom [E]]
 % правила грамматики
@@ -14,6 +19,45 @@ TEXT = """
 [T    [F T']]
 [T'   [* F T'] []]
 [F    [n] [( E )]]
+```
+
+# Грамматика на входном языке
+
+```
+[axiom [GRAMMAR]]
+[GRAMMAR [AXIOM RULES]]
+[AXIOM [lb "axiom" lb NT rb rb]]
+[RULES [RULE RULES] []]
+[RULE [lb NT RHS rb]]
+[NT [nonterm]]
+[RHS [PRODUCTIONS RHSTAIL]]
+[RHSTAIL [PRODUCTIONS RHSTAIL] []]
+[PRODUCTIONS [lb PRODUCTIONSBODY rb]]
+[PRODUCTIONSBODY [term PRODUCTIONSBODY] [nonterm PRODUCTIONSBODY] []]
+```
+
+# Реализация
+## Генератор компиляторов
+
+```
+#!/usr/bin/env python3
+
+from parser import Node, top_down_parse
+import copy
+import lexer
+from table import TABLE
+
+TEXT = """
+[axiom [GRAMMAR]]
+[GRAMMAR [AXIOM RULES]]
+[AXIOM [lb "axiom" lb NT rb rb]]
+[RULES [RULE RULES] []]
+[RULE [lb NT RHS rb]]
+[NT [nonterm]]
+[RHS [PRODUCTIONS RHSTAIL]]
+[RHSTAIL [PRODUCTIONS RHSTAIL] []]
+[PRODUCTIONS [lb PRODUCTIONSBODY rb]]
+[PRODUCTIONSBODY [term PRODUCTIONSBODY] [nonterm PRODUCTIONSBODY] []]
 """
 
 
@@ -222,7 +266,8 @@ def gen_table(tree: Node):
 def main():
     tokens = lexer.tokenize(TEXT)
     derivation_tree = top_down_parse(tokens, 'Grammar',
-                                     ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'],
+                                     ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM',
+                                     'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'],
                                      TABLE)
     table = gen_table(derivation_tree)
     res_table = dict()
@@ -250,3 +295,152 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+## Калькулятор
+
+```
+#!/usr/bin/env python3
+
+import lexer
+from parser import *
+from table import TABLE
+
+
+TEXT = """
+(2 + 3) * 4
+"""
+
+
+def dfs(root: Node):
+    if root.attr is not None and root.attr in '()':
+        return None
+    if root.attr is not None and root.attr != '':
+        return [root.attr]
+    attrs = list()
+    for child in root.children:
+        tmp = dfs(child)
+        if tmp is not None:
+            for el in tmp:
+                attrs.append(el)
+    if len(attrs) == 3:
+        return [calc(*attrs)]
+    return attrs
+
+
+def calc(lhs, op, rhs):
+    if op == "+":
+        return int(lhs)+int(rhs)
+    elif op == "*":
+        return int(lhs)*int(rhs)
+    raise Exception("unreachable")
+
+
+def calc_expr(derivation_tree: Node):
+    return dfs(derivation_tree)[0]
+
+
+def main():
+    tokens = lexer.tokenize(TEXT)
+    derivation_tree = top_down_parse(tokens,
+    'E', ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
+    # print(get_dot(derivation_tree))
+    # print()
+    # print()
+    print(calc_expr(derivation_tree))
+
+
+if __name__ == "__main__":
+    main()
+```
+
+# Тестирование
+## Генератор компиляторов
+
+Таблица для калькулятора
+
+```
+TABLE = {'E': {'LCB': ['T', "E'"], 'NUM': ['T', "E'"]},
+"E'": {'PLUS': ['PLUS', 'T', "E'"], '$': [], 'RCB': []},
+'T': {'LCB': ['F', "T'"], 'NUM': ['F', "T'"]}, "T'": {'STAR': ['STAR', 'F', "T'"], 'PLUS': [], '$': [],
+'RCB': []}, 'F': {'NUM': ['NUM'], 'LCB': ['LCB', 'E', 'RCB']}}
+
+```
+
+Таблица для собственной грамматики
+
+```python
+ TABLE = {'Grammar': {'LB': ['Axiom', 'Rules']},
+           'Axiom': {'LB': ['LB', 'AXIOM', 'LB', 'Nt', 'RB', 'RB']},
+           'Rules': {'LB': ['Rule', 'Rules'], '$': []},
+           'Rule': {'LB': ['LB', 'Nt', 'Rhs', 'RB']},
+           'Nt': {'NONTERM': ['NONTERM']},
+           'Rhs': {'LB': ['Productions', 'Rhstail']},
+           'Rhstail': {'LB': ['Productions', 'Rhstail'], 'RB': []},
+           'Productions': {'LB': ['LB', 'Productionsbody', 'RB']},
+           'Productionsbody': {'TERM': ['TERM', 'Productionsbody'],
+                               'NONTERM': ['NONTERM', 'Productionsbody'],
+                               'RB': []}}
+```
+
+## Калькулятор
+
+```python
+#!/usr/bin/env python3
+
+import lexer
+from parser import *
+from table import TABLE
+
+
+TEXT = """
+(2 + 3) * 4
+"""
+
+
+def dfs(root: Node):
+    if root.attr is not None and root.attr in '()':
+        return None
+    if root.attr is not None and root.attr != '':
+        return [root.attr]
+    attrs = list()
+    for child in root.children:
+        tmp = dfs(child)
+        if tmp is not None:
+            for el in tmp:
+                attrs.append(el)
+    if len(attrs) == 3:
+        return [calc(*attrs)]
+    return attrs
+
+
+def calc(lhs, op, rhs):
+    if op == "+":
+        return int(lhs)+int(rhs)
+    elif op == "*":
+        return int(lhs)*int(rhs)
+    raise Exception("unreachable")
+
+
+def calc_expr(derivation_tree: Node):
+    return dfs(derivation_tree)[0]
+
+
+def main():
+    tokens = lexer.tokenize(TEXT)
+    derivation_tree = top_down_parse(tokens, 'E',
+        ['$', 'LB', 'RB', 'AXIOM', 'NONTERM', 'TERM', 'LCB', 'RCB', 'NUM', 'STAR', 'PLUS'], TABLE)
+    # print(get_dot(derivation_tree))
+    # print()
+    # print()
+    print(calc_expr(derivation_tree))
+
+
+if __name__ == "__main__":
+    main()
+```
+
+# Вывод
+
+Изучил алгоритм построения таблиц предсказывающего анализатора.
+

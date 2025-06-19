@@ -16,6 +16,9 @@ $EXTERN Tokenize, ReadAll, TokenToString;
 
 /* t.Node ::= (s.NT s.Child*) */
 /* s.Child ::= t.Node | s.Token */
+
+
+/* Program -> Function* */
 Program {
     (e.Children) t.ErrorList = (Program e.Children) t.ErrorList;
     (e.Children) e.Tokens t.ErrorList
@@ -25,81 +28,115 @@ Program {
     }
 }
 
+/* Function -> Name Body */
 Function {
     () (IDENT e.Rest) e.Tokens t.ErrorList = <Function () <Name () (IDENT e.Rest) e.Tokens t.ErrorList>>;
     () (Name e.Rest) e.Tokens t.ErrorList = <Function ((Name e.Rest)) e.Tokens t.ErrorList>;
+    () t.Other e.Tokens (e.Errors) = <Function () e.Tokens (e.Errors (Error "expected IDENT, got" t.Other))>;
+    () (e.Errors) = (Function) (e.Errors (Error "expected IDENT, got EOF"));
     ((Name e.1)) (Body e.2) e.Tokens t.ErrorList = (Function (Name e.1) (Body e.2)) e.Tokens t.ErrorList;
     ((Name e.Rest)) e.Tokens t.ErrorList = <Function ((Name e.Rest)) <Body () e.Tokens t.ErrorList>>;
+    t.Else e.Tokens t.ErrorList = (Function t.Else) e.Tokens t.ErrorList;
 }
 
+/* Name -> IDENT */
 Name {
     () (IDENT e.Rest) e.Tokens t.ErrorList = (Name (IDENT e.Rest)) e.Tokens t.ErrorList;
+    t.Else e.Tokens t.ErrorList = (Name t.Else) e.Tokens t.ErrorList;
 }
 
+/* Body -> { Sentence+ } */
 Body {
     () (LCB e.Rest) e.Tokens t.ErrorList = <Body ((LCB e.Rest)) e.Tokens t.ErrorList>;
+    () t.Other e.Tokens (e.Errors) = <Body () e.Tokens (e.Errors (Error "expected LCB, got" t.Other))>;
+    () (e.Errors) = (Body ()) (e.Errors (Error "expected LCB, got EOF"));
     (e.1) (Sentence e.Rest) e.Tokens t.ErrorList = <Body (e.1 (Sentence e.Rest)) e.Tokens t.ErrorList>;
     ((LCB e.Rest)) e.Tokens t.ErrorList = <Body ((LCB e.Rest)) <Sentence () e.Tokens t.ErrorList>>;
     ((LCB e.1) e.2 (Sentence e.3)) (RCB e.Rest) e.Tokens t.ErrorList = (Body e.2 (Sentence e.3)) e.Tokens t.ErrorList;
     (e.1 (Sentence e.2)) e.Tokens t.ErrorList = <Body (e.1 (Sentence e.2)) <Sentence () e.Tokens t.ErrorList>>;
+    t.Else e.Tokens t.ErrorList = (Body t.Else) e.Tokens t.ErrorList;
 }
 
+/* Sentence -> SentenceBody ; */
 Sentence {
     () (SentenceBody e.Rest) e.Tokens t.ErrorList = <Sentence ((SentenceBody e.Rest)) e.Tokens t.ErrorList>;
     () e.Tokens t.ErrorList = <Sentence () <SentenceBody () e.Tokens t.ErrorList>>;
     ((SentenceBody e.1)) (SEMICOLON e.2) e.Tokens t.ErrorList = (Sentence e.1) e.Tokens t.ErrorList;
+    ((SentenceBody e.1)) t.Other e.Tokens (e.Errors) = <Sentence ((SentenceBody e.1)) e.Tokens (e.Errors (Error "expected SEMICOLON, got " t.Other))>;
+    ((SentenceBody e.1)) (e.Errors) = (Sentence ((SentenceBody e.1))) (e.Errors (Error "expected SEMICOLON, got EOF"));
+    t.Else e.Tokens t.ErrorList = (Sentence t.Else) e.Tokens t.ErrorList;
 }
 
+/* SentenceBody -> Pattern SentenceBodyTail */
 SentenceBody {
     () (Pattern e.1) e.Tokens t.ErrorList = <SentenceBody ((Pattern e.1)) e.Tokens t.ErrorList>;
     () e.Tokens t.ErrorList = <SentenceBody () <Pattern () e.Tokens t.ErrorList>>;
     ((Pattern e.1)) (SentenceBodyTail e.2) e.Tokens t.ErrorList = (SentenceBody e.2) e.Tokens t.ErrorList;
     ((Pattern e.1)) e.Tokens t.ErrorList = <SentenceBody ((Pattern e.1)) <SentenceBodyTail () e.Tokens t.ErrorList>>;
+    t.Else e.Tokens t.ErrorList = (SentenceBody t.Else) e.Tokens t.ErrorList;
 }
 
+/* SentenceBodyTail -> = Result | , Result : BlockTail */
 SentenceBodyTail {
     () (EQ e.Rest) e.Tokens t.ErrorList = <SentenceBodyTail ((EQ e.Rest)) e.Tokens t.ErrorList>;
     ((EQ e.1)) (Result e.2) e.Tokens t.ErrorList = (SentenceBodyTail (EQ e.1) (Result e.2)) e.Tokens t.ErrorList;
     ((EQ e.Rest)) e.Tokens t.ErrorList = <SentenceBodyTail ((EQ e.Rest)) <Result () e.Tokens t.ErrorList>>;
     () (COMMA e.Rest) e.Tokens t.ErrorList = <SentenceBodyTail ((COMMA e.Rest)) <Result () e.Tokens t.ErrorList>>;
+    () t.Other e.Tokens (e.Errors) = <SentenceBodyTail () e.Tokens (e.Errors (Error "expected COMMA or EQ, got " t.Other))>;
+    () (e.Errors) = (SentenceBodyTail ()) (e.Errors (Error "expected COMMA or EQ, got EOF"));
     ((COMMA e.1)) (Result e.2) e.Tokens t.ErrorList = <SentenceBodyTail ((COMMA e.1) (Result e.2)) e.Tokens t.ErrorList>;
     ((COMMA e.Rest)) e.Tokens t.ErrorList = <SentenceBodyTail ((COMMA e.Rest)) <Result () e.Tokens t.ErrorList>>;
     ((COMMA e.1) (Result e.2)) (COLON e.3) e.Tokens t.ErrorList = <SentenceBodyTail ((COMMA e.1) (Result e.2) (COLON e.3)) e.Tokens t.ErrorList>;
+    ((COMMA e.1) (Result e.2)) t.Other e.Tokens (e.Errors) = <SentenceBodyTail ((COMMA e.1) (Result e.2)) e.Tokens (e.Errors (Error "expected COLON, got" t.Other))>;
+    ((COMMA e.1) (Result e.2)) (e.Errors) = (SentenceBodyTail ((COMMA e.1) (Result e.2))) (e.Errors (Error "expected COLON, got EOF"));
     ((COMMA e.1) (Result e.2) (COLON e.3)) (BlockTail e.4) e.Tokens t.ErrorList = (SentenceBodyTail (COMMA e.1) (Result e.2) (COLON e.3) (BlockTail e.4)) e.Tokens t.ErrorList;
     ((COMMA e.1) (Result e.2) (COLON e.3)) e.Tokens t.ErrorList = <SentenceBodyTail ((COMMA e.1) (Result e.2) (COLON e.3)) <BlockTail () e.Tokens t.ErrorList>>;
+    t.Else e.Tokens t.ErrorList = (SentenceBodyTail t.Else) e.Tokens t.ErrorList;
 }
 
+/* Call -> < Name Result > */
 Call {
     ((LT e.1)) (IDENT e.2) e.Tokens t.ErrorList = <Call ((LT e.1) (Name (IDENT e.2))) e.Tokens t.ErrorList>;
+    ((LT e.1)) t.Other e.Tokens (e.Errors) = <Call ((LT e.1)) e.Tokens (e.Errors (Error "expected IDENT, got " t.Other))>;
+    ((LT e.1)) (e.Errors) = (Call ((LT e.1))) (e.Errors (Error "expected IDENT, got EOF"));
     ((LT e.1) (Name e.2) (Result e.3)) (GT e.4) e.Tokens t.ErrorList = (Call (Name e.2) (Result e.3)) e.Tokens t.ErrorList;
     ((LT e.1) (Name e.2)) (Result e.3) e.Tokens t.ErrorList = <Call ((LT e.1) (Name e.2) (Result e.3)) e.Tokens t.ErrorList>;
     ((LT e.1) (Name e.2)) e.Tokens t.ErrorList = <Call ((LT e.1) (Name e.2)) <Result () e.Tokens t.ErrorList>>;
+    t.Else e.Tokens t.ErrorList = (Call t.Else) e.Tokens t.ErrorList;
 }
 
+/* BlockTail -> Pattern SentenceBodyTail | Body */
 BlockTail {
     () (Pattern e.Rest) e.Tokens t.ErrorList = <BlockTail ((Pattern e.Rest)) e.Tokens t.ErrorList>;
     () (s.Domain e.Rest) e.Tokens t.ErrorList, <IsPatternElement s.Domain> : True = <BlockTail () <Pattern () (s.Domain e.Rest) e.Tokens t.ErrorList>>;
     () (LCB e.Rest) e.Tokens t.ErrorList = <BlockTail () <Body ((LCB e.Rest)) e.Tokens t.ErrorList>>;
     () (Body e.Rest) e.Tokens t.ErrorList = <BlockTail ((Body e.Rest)) e.Tokens t.ErrorList>;
+    () t.Other e.Tokens (e.Errors) = <BlockTail () e.Tokens (e.Errors (Error "expected block or pattern, got " t.Other))>;
+    () (e.Errors) = (BlockTail ()) (e.Errors (Error "expected block or pattern, got EOF"));
     ((Body e.Rest)) e.Tokens t.ErrorList = (BlockTail (Body e.Rest)) e.Tokens t.ErrorList;
     ((Pattern e.Rest)) (SentenceBodyTail e.2) e.Tokens t.ErrorList = <BlockTail ((Pattern e.Rest) (SentenceBodyTail e.2)) e.Tokens t.ErrorList>;
     ((Pattern e.Rest)) e.Tokens t.ErrorList = <BlockTail ((Pattern e.Rest)) <SentenceBodyTail () e.Tokens t.ErrorList>>;
     ((Pattern e.Rest) (SentenceBodyTail e.2)) e.Tokens t.ErrorList = (BlockTail (Pattern e.Rest) (SentenceBodyTail e.2)) e.Tokens t.ErrorList;
+    t.Else e.Tokens t.ErrorList = (BlockTail t.Else) e.Tokens t.ErrorList;
 }
 
+/* Pattern -> PatternElement* */
 Pattern {
     (e.Contents) (PatternElement e.Rest) e.Tokens t.ErrorList = <Pattern (e.Contents (PatternElement e.Rest)) e.Tokens t.ErrorList>;
     (e.Contents) (LB e.Rest) e.Tokens t.ErrorList = <Pattern (e.Contents) <PatternElement () (LB e.Rest) e.Tokens t.ErrorList>>;
     (e.Contents) (s.Domain e.Rest) e.Tokens t.ErrorList, <IsPatternElement s.Domain> : True = <Pattern (e.Contents) <PatternElement () (s.Domain e.Rest) e.Tokens t.ErrorList>>;
     (e.Contents) e.Tokens t.ErrorList = (Pattern e.Contents) e.Tokens t.ErrorList;
+    t.Else e.Tokens t.ErrorList = (Pattern t.Else) e.Tokens t.ErrorList;
 }
 
+/* PatternElement -> Variable | STR | NUMBER | IDENT | \( Pattern \) */
 PatternElement {
     () (LB e.Rest) e.Tokens t.ErrorList = <PatternElement ((LB e.Rest)) e.Tokens t.ErrorList>;
     ((LB e.1)) (Pattern e.2) e.Tokens t.ErrorList = <PatternElement ((LB e.1) (Pattern e.2)) e.Tokens t.ErrorList>;
     ((LB e.Rest)) e.Tokens t.ErrorList = <PatternElement ((LB e.Rest)) <Pattern () e.Tokens t.ErrorList>>;
     ((LB e.1) (Pattern e.2)) (RB e.3) e.Tokens t.ErrorList = (PatternElement (LB e.1) (Pattern e.2) (RB e.3)) e.Tokens t.ErrorList;
     () (s.Domain e.Rest) e.Tokens t.ErrorList, <IsPatternElement s.Domain> : True = (PatternElement (s.Domain e.Rest)) e.Tokens t.ErrorList;
+    t.Else e.Tokens t.ErrorList = (PatternElement t.Else) e.Tokens t.ErrorList;
 }
 
 IsPatternElement {
@@ -111,23 +148,29 @@ IsPatternElement {
     e.Else = False;
 }
 
+/* Result -> (PatternElement | Call)* */
 Result {
     (e.Contents) (PatternElement e.Rest) e.Tokens t.ErrorList = <Result (e.Contents (PatternElement e.Rest)) e.Tokens t.ErrorList>;
     (e.Contents) (s.Domain e.Rest) e.Tokens t.ErrorList, <IsPatternElement s.Domain> : True = <Result (e.Contents) <PatternElement () (s.Domain e.Rest) e.Tokens t.ErrorList>>;
     (e.Contents) (Call e.Rest) e.Tokens t.ErrorList = <Result (e.Contents (Call e.Rest)) e.Tokens t.ErrorList>;
     (e.Contents) (LT e.Rest) e.Tokens t.ErrorList = <Result (e.Contents) <Call ((LT e.Rest)) e.Tokens t.ErrorList>>;
     (e.Contents) e.Tokens t.ErrorList = (Result e.Contents) e.Tokens t.ErrorList;
+    t.Else e.Tokens t.ErrorList = (Result t.Else) e.Tokens t.ErrorList;
 }
 
 Parse {
-    e.Tokens = <Program () e.Tokens ()>;
+    e.Tokens
+    , <Program () e.Tokens ()>
+    : {
+        t.Program t.ErrorList = <Prout t.Program> <Prout> <Prout t.ErrorList>;
+    }
 }
 
 $ENTRY Go {
     /* empty */
     , <Tokenize <ReadAll>>
     : {
-        (e.Tokens) = <Prout <Parse e.Tokens>>;
+        (e.Tokens) = <Parse e.Tokens>;
         (e.Tokens) e.Errors = <Prout error>;
     };
 }

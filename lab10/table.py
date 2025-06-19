@@ -1,1 +1,11 @@
-TABLE = {'Grammar': {'LB': ['Axiom', 'Rules']}, 'Axiom': {'LB': ['LB', 'AXIOM', 'LB', 'Nt', 'RB', 'RB']}, 'Rules': {'LB': ['Rule', 'Rules'], '$': []}, 'Rule': {'LB': ['LB', 'Nt', 'Rhs', 'RB']}, 'Nt': {'NONTERM': ['NONTERM']}, 'Rhs': {'LB': ['Productions', 'Rhstail']}, 'Rhstail': {'LB': ['Productions', 'Rhstail'], 'RB': []}, 'Productions': {'LB': ['LB', 'Productionsbody', 'RB']}, 'Productionsbody': {'TERM': ['TERM', 'Productionsbody'], 'NONTERM': ['NONTERM', 'Productionsbody'], 'RB': []}}
+TABLE = {'Grammar': {'LB': ['Axiom', 'Rules']},
+          'Axiom': {'LB': ['LB', 'AXIOM', 'LB', 'Nt', 'RB', 'RB']},
+          'Rules': {'LB': ['Rule', 'Rules'], '$': []},
+          'Rule': {'LB': ['LB', 'Nt', 'Rhs', 'RB']},
+          'Nt': {'NONTERM': ['NONTERM']},
+          'Rhs': {'LB': ['Productions', 'Rhstail']},
+          'Rhstail': {'LB': ['Productions', 'Rhstail'], 'RB': []},
+          'Productions': {'LB': ['LB', 'Productionsbody', 'RB']},
+          'Productionsbody': {'TERM': ['TERM', 'Productionsbody'],
+                              'NONTERM': ['NONTERM', 'Productionsbody'],
+                              'RB': []}}
